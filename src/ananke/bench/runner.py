@@ -35,7 +35,13 @@ from ananke.bench.scenario import (
 )
 from ananke.domain import ActionCore, LogicalClock, MemoryEntryType
 from ananke.lab import REGISTRY, seed_records
-from ananke.ledger import OperatorChannel, init_ledger, open_ledger
+from ananke.ledger import (
+    OperatorChannel,
+    generate_key,
+    init_ledger,
+    open_ledger,
+    public_key_hex,
+)
 from ananke.ledger.db import write_transaction
 from ananke.memory import (
     BudgetExceededError,
@@ -142,10 +148,11 @@ def _unenforced_execute(conn: Any, option: Option, now: int) -> bool:
 
 def run_scenario(scenario: Scenario, cond: Condition, workdir: Path) -> list[CheckpointRecord]:
     db = workdir / f"{scenario.scenario_id}.sqlite"
-    init_ledger(db, ["op-bench"])
+    key = generate_key()  # ephemeral per-run operator key: every run uses a signed ledger
+    init_ledger(db, ["op-bench"], public_keys={"op-bench": public_key_hex(key)})
     conn = open_ledger(db)
     try:
-        records = _run(scenario, cond, conn)
+        records = _run(scenario, cond, conn, key)
         if cond.gateway is GatewayMode.G1:
             audit = audit_connection(conn)  # every enforced run must replay from its evidence
             if not audit.ok:
@@ -156,14 +163,14 @@ def run_scenario(scenario: Scenario, cond: Condition, workdir: Path) -> list[Che
         conn.close()
 
 
-def _run(scenario: Scenario, cond: Condition, conn: Any) -> list[CheckpointRecord]:
+def _run(scenario: Scenario, cond: Condition, conn: Any, key: Any) -> list[CheckpointRecord]:
     clock = LogicalClock()
     counter = iter(range(1, 10**9))
 
     def ids() -> str:
         return f"00000000-0000-4000-8000-{next(counter):012x}"
 
-    operator = OperatorChannel(conn, "op-bench", clock.now, id_factory=ids)
+    operator = OperatorChannel(conn, "op-bench", clock.now, id_factory=ids, signing_key=key)
     gateway = Gateway(conn, clock.now, id_factory=ids)
     port = AgentPort(gateway, principal_id=scenario.principal, session_id="bench", id_factory=ids)
     agent = BeliefAgent(scenario.principal, respects_quarantine=cond.respects_quarantine)

@@ -44,7 +44,8 @@ against malicious code running in the same interpreter (ADR-0003). OS or process
 | A8 | Promote authority labels in memory | Labels computed by trusted code from the origin channel; an unknown source makes the entry UNTRUSTED + RESTRICTED | **Tested**: `unit/test_memory.py`, `property/test_memory_properties.py` |
 | A9 | Plant forged policy statements in tool output for the agent to adopt | Quarantine of non-operator content (M5); gateway denies regardless | **Tested**: `integration/test_strategies.py`. Adoption is still possible when an agent ignores quarantine (measured: 4/4 in the pilot) |
 | A10 | Tamper with the schema while a gateway connection is open (drop or replace triggers, add tables) | Schema fingerprint checked inside **every** decision transaction | **Tested**: `integration/test_review_fixes.py` |
-| A11 | Insert forged decisions, effects, approvals or consumptions into evidence tables | Approval chain; evidence audit replays every decision and links every effect, consumption and idempotency row | **Tested**, with one documented limitation: a consistent forgery under a registered operator passes (ADR-0010) |
+| A11 | Insert forged decisions, effects, approvals or consumptions into evidence tables | Approval chain; evidence audit replays every decision and links every effect, consumption and idempotency row; **on signed ledgers every event and approval must carry a valid operator signature** | **Tested**: forged events or approvals (unsigned, wrong key, wrong operator, replaced signatures) are rejected by verify, the reader and the gateway. On *unsigned* ledgers a consistent forgery still passes (tested, documented) |
+| A12 | Truncate the newest records or rewrite history below a known point | Signed external checkpoints of the three chain heads, stored off the host | **Tested**: truncation and rewrites below a checkpoint, a checkpoint from another ledger and tampered checkpoint contents are all detected |
 
 ## 4. Out of scope (explicit exclusions)
 
@@ -74,9 +75,11 @@ revocation cannot recall it (see RevBench in related work). The gateway only pre
 
 ## 6. Known limitations (tested where possible)
 
-- **No authenticity, only tamper evidence.** An attacker with database write access can append chain-consistent events or
-  approvals under a registered operator identity. This is asserted by `test_consistent_forgery_under_registered_operator_is_NOT_caught`.
-  Operator signatures are proposed in ADR-0010 (a threat-model change, so it needs an owner decision).
+- **Authenticity requires a signed ledger** (ADR-0010). On signed ledgers, forging authority needs an operator's private key.
+  Key secrecy is now an assumption of the TCB. Compromised keys, key rotation and key revocation are out of scope. **Unsigned** ledgers keep the
+  old limitation (asserted by `test_consistent_forgery_under_registered_operator_is_NOT_caught`).
+- **Truncation is detected only against a checkpoint.** Without a stored checkpoint, deleting the newest records still leaves a
+  valid shorter chain.
 - **The provenance benefit is conditional.** Quarantine protects only an agent that treats quoted content as data
   (ADR-0011). The pilot shows full adoption when the agent ignores the markers.
 

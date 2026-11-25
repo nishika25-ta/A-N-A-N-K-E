@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 # License intentionally unset: Apache-2.0 is proposed, pending owner review (see STATUS.md).
 dependencies = [
+  "cryptography>=43,<47",
   "pydantic>=2.9,<3",
   "typer>=0.12,<1",
 ]

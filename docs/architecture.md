@@ -88,7 +88,7 @@ Any exception before `COMMIT` rolls everything back, and a fail-closed DENY is t
 transaction. `sqlite3.OperationalError` maps to `LEDGER_UNAVAILABLE`. If the evidence cannot be written,
 `GatewayUnavailableError` is raised.
 
-## 4. Storage schema (migrations 1-2, digest-pinned, fingerprinted per transaction)
+## 4. Storage schema (migrations 1-3, digest-pinned, fingerprinted per transaction)
 
 | Table | Mutability | Purpose |
 |---|---|---|
@@ -101,6 +101,9 @@ transaction. `sqlite3.OperationalError` maps to `LEDGER_UNAVAILABLE`. If the evi
 | `idempotency` | append-only | Key bound to the digest of a committed effect |
 | `lab_records` | effect handlers only | Synthetic lab state |
 | `lab_effects` | append-only | One row per committed effect |
+| `ledger_config` | append-only | `signing` (required/none), `ledger_id` |
+| `operator_keys` | append-only | Ed25519 public keys (private keys never enter the DB) |
+| `record_signatures` | append-only, PK = (kind, hash) | One operator signature per event and approval |
 
 ## 5. Memory plane and the benchmark
 

@@ -19,7 +19,14 @@ from typing import Any
 from ananke.domain import ActionCore, LogicalClock, PolicyChange, digest
 from ananke.lab import seed_records
 from ananke.lab.fixtures import DEMO_FIXTURES
-from ananke.ledger import OperatorChannel, init_ledger, open_ledger, verify_ledger
+from ananke.ledger import (
+    OperatorChannel,
+    generate_key,
+    init_ledger,
+    open_ledger,
+    public_key_hex,
+    verify_ledger,
+)
 from ananke.ledger.db import write_transaction
 from ananke.providers import ScriptedAgent
 from ananke.runtime import AgentPort, Gateway
@@ -47,10 +54,13 @@ def _proposal(tool: str, op: str, res: str, key: str, **extra: Any) -> dict[str,
 
 def run_demo(workdir: Path, seed: int = 42) -> dict[str, Any]:
     db = workdir / "demo.sqlite"
-    init_ledger(db, [OPERATOR])
+    key = generate_key()  # ephemeral operator key: the demo ledger is signed (ADR-0010)
+    init_ledger(db, [OPERATOR], public_keys={OPERATOR: public_key_hex(key)})
     conn = open_ledger(db)
     clock = LogicalClock()
-    operator = OperatorChannel(conn, OPERATOR, clock.now, id_factory=seeded_ids(seed, "ledger"))
+    operator = OperatorChannel(
+        conn, OPERATOR, clock.now, id_factory=seeded_ids(seed, "ledger"), signing_key=key
+    )
     gateway = Gateway(conn, clock.now, id_factory=seeded_ids(seed, "gateway"))
     agent = ScriptedAgent(
         AgentPort(
@@ -212,6 +222,7 @@ def run_demo(workdir: Path, seed: int = 42) -> dict[str, Any]:
             "ok": report.ok,
             "epoch": report.epoch,
             "events": report.event_count,
+            "authenticity": report.authenticity,
         },
         "all_outcomes_as_expected": all_expected,
         "trace_digest": digest(body),

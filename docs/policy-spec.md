@@ -165,10 +165,19 @@ Both are rendered deterministically from the reduced ledger. The assembler raise
 them. Sections whose header is `UNTRUSTED DATA` hold quoted non-operator content and are never policy. **The gateway
 always evaluates the full ledger, whatever any context says.**
 
+## 10a. Signatures and checkpoints (implemented; ADR-0010)
+
+A ledger is **signed** when created with a public key for every operator (`ledger_config.signing = required`). Then:
+every policy event and approval carries an Ed25519 signature over `ananke-sig-1\n<kind>\n<record_hash>` by its
+issuing operator's registered key. The reader, verification and the gateway's approval check reject a missing, invalid or
+mis-attributed signature (fail closed). A **checkpoint** is a signed record of the three chain heads, stored outside the
+database. `verify_checkpoint` reports truncation and rewrites below it. Unsigned ledgers are reported as
+`authenticity: unsigned`.
+
 ## 10. Evidence audit (implemented: `ananke.audit`)
 
 `ananke ledger verify` checks the structure of the policy, approval and decision chains. Then it **replays every
 policy-derived decision** with the evaluator against the ledger state at that decision's epoch and tick, and cross-checks
 `lab_effects`, `approval_consumptions` and `idempotency` against the ALLOW decisions that justify them, in both directions.
-Exit 0 only if both pass. Limitation: forgery that stays consistent under a registered operator identity passes, which is
-why signatures are proposed in ADR-0010.
+Exit 0 only if both pass. On unsigned ledgers, forgery that stays consistent under a registered operator identity still
+passes. Signed ledgers (section 10a) close that gap.

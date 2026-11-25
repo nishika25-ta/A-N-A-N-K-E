@@ -185,8 +185,9 @@ def test_orphan_effect_and_consumption_are_caught(tmp_path: Path) -> None:
 
 
 def test_consistent_forgery_under_registered_operator_is_NOT_caught(tmp_path: Path) -> None:
-    """Documented limitation (ADR-0010 proposed): without operator signatures, an attacker with
-    full DB write access who forges a *correctly chained* approval passes verification and audit."""
+    """Documented limitation of **unsigned** ledgers: an attacker with DB write access who
+    forges a correctly chained approval passes verification and audit. Signed ledgers
+    (ADR-0010) close this; see test_signatures.py (consistent approval forgery is denied)."""
     from ananke.ledger.db import write_transaction
     from ananke.ledger.evidence import append_approval
 

@@ -32,13 +32,15 @@ uv run ananke bench run --config research/experiments/pilot-dev.json --offline
 uv run ananke bench report --run-dir results/runs/<run_id>
 ```
 
-Operator-side ledger tools:
+Operator-side ledger tools (signed ledger, ADR-0010):
 
 ```bash
-uv run ananke ledger init   --db .ananke/demo.sqlite --operator op-admin
+uv run ananke ledger keygen --out op-admin.key          # prints the public key; the key file is 0600
+uv run ananke ledger init   --db .ananke/demo.sqlite --operator op-admin --pubkey <public-key-hex>
 uv run ananke policy validate examples/policy.json
-uv run ananke ledger apply  --db .ananke/demo.sqlite --operator op-admin --changes examples/policy.json --at 0
-uv run ananke ledger verify --db .ananke/demo.sqlite   # chains + full evidence audit by replay
+uv run ananke ledger apply  --db .ananke/demo.sqlite --operator op-admin --changes examples/policy.json --at 0 --key op-admin.key
+uv run ananke ledger checkpoint --db .ananke/demo.sqlite --operator op-admin --key op-admin.key --at 0 --out cp.json
+uv run ananke ledger verify --db .ananke/demo.sqlite --checkpoint cp.json   # chains, signatures, audit, checkpoint
 uv run ananke ledger show   --db .ananke/demo.sqlite --at 12
 ```
 
@@ -59,8 +61,8 @@ unavailable or a run is locked (for example a holdout run before preregistration
 - Synthetic local mock tools only (6 operations). No real endpoints, credentials, personal data, shell or network. The
   test suite blocks sockets.
 - This is a research prototype, not a certified security product. Read [`docs/threat-model.md`](docs/threat-model.md), especially
-  its known limitations: tamper evidence without authenticity (ADR-0010 proposes signatures), undetected tail truncation,
-  and a conditional provenance benefit.
+  its known limitations: authenticity only on signed ledgers (and only while keys stay secret), truncation detected only
+  against a checkpoint, and a conditional provenance benefit.
 
 ## Documents
 

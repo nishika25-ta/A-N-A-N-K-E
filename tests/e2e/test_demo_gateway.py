@@ -17,7 +17,12 @@ def test_demo_outcomes_match_declared_expectations() -> None:
     agent_steps = [s for s in result["steps"] if s["actor"] == "agent"]
     assert result["all_outcomes_as_expected"] is True
     assert all(s["as_expected"] for s in agent_steps)
-    assert result["ledger_verification"] == {"ok": True, "epoch": 4, "events": 4}
+    assert result["ledger_verification"] == {
+        "ok": True,
+        "epoch": 4,
+        "events": 4,
+        "authenticity": "signed",
+    }
     assert [(e["tool"], e["operation"]) for e in result["committed_effects"]] == [
         ("ticket", "read"),
         ("report", "read"),

@@ -12,12 +12,13 @@ from __future__ import annotations
 
 import sqlite3
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import cast
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
 
 from ananke.domain import (
@@ -48,6 +49,16 @@ from ananke.ledger.reducer import (
     build_event,
     check_chain,
     reduce_events,
+)
+from ananke.ledger.signing import (
+    KIND_APPROVAL,
+    KIND_EVENT,
+    Authenticator,
+    SigningError,
+    insert_signature,
+    public_key_from_hex,
+    public_key_hex,
+    signing_mode,
 )
 
 IdFactory = Callable[[], str]
@@ -81,6 +92,7 @@ class VerifyCode(StrEnum):
     UNKNOWN_OPERATOR = "UNKNOWN_OPERATOR"
     DECISION_LOG_INVALID = "DECISION_LOG_INVALID"
     APPROVAL_LOG_INVALID = "APPROVAL_LOG_INVALID"
+    SIGNATURE_INVALID = "SIGNATURE_INVALID"
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +114,7 @@ class VerificationReport:
     head_hash: str
     state_digest: str | None
     errors: tuple[VerifyIssue, ...] = field(default_factory=tuple)
+    authenticity: str = "unknown"  # "signed" | "unsigned" | "invalid" | "unknown"
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -111,6 +124,7 @@ class VerificationReport:
             "epoch": self.epoch,
             "head_hash": self.head_hash,
             "state_digest": self.state_digest,
+            "authenticity": self.authenticity,
             "errors": [e.as_dict() for e in self.errors],
         }
 
@@ -118,13 +132,30 @@ class VerificationReport:
 # --------------------------------------------------------------------------- initialization
 
 
-def init_ledger(path: Path | str, operators: Sequence[str], *, registered_at: int = 0) -> None:
-    """Create a new ledger database with the given operator identities (trusted setup)."""
+def init_ledger(
+    path: Path | str,
+    operators: Sequence[str],
+    *,
+    registered_at: int = 0,
+    public_keys: Mapping[str, str] | None = None,
+) -> None:
+    """Create a new ledger with the given operator identities (trusted setup).
+
+    With ``public_keys`` (operator -> Ed25519 public key hex, one for **every** operator), the
+    ledger is **signed**: every policy event and approval must carry a valid operator signature
+    (ADR-0010). Without it the ledger is unsigned and is reported as such.
+    """
     if not operators:
         raise ValueError("at least one operator identity is required")
     ids = [validate_identifier(op, "operator") for op in operators]
     if len(set(ids)) != len(ids):
         raise ValueError("duplicate operator identity")
+    keys: dict[str, str] = {}
+    if public_keys is not None:
+        if set(public_keys) != set(ids):
+            raise ValueError("public_keys must name exactly the registered operators")
+        for op, hexkey in public_keys.items():
+            keys[op] = public_key_hex(public_key_from_hex(hexkey))  # validate + normalize
     db_path = Path(path)
     conn = connect(db_path, create=True)
     try:
@@ -133,6 +164,14 @@ def init_ledger(path: Path | str, operators: Sequence[str], *, registered_at: in
             conn.executemany(
                 "INSERT INTO operators(actor_id, registered_at) VALUES (?, ?)",
                 [(op, registered_at) for op in ids],
+            )
+            conn.executemany(
+                "INSERT INTO ledger_config(key, value) VALUES (?, ?)",
+                [("signing", "required" if keys else "none"), ("ledger_id", uuid4_factory())],
+            )
+            conn.executemany(
+                "INSERT INTO operator_keys(actor_id, public_key, registered_at) VALUES (?, ?, ?)",
+                [(op, k, registered_at) for op, k in sorted(keys.items())],
             )
     except BaseException:
         conn.close()
@@ -199,7 +238,10 @@ def _parse_row(row: tuple[object, ...]) -> tuple[PolicyEvent | None, list[Verify
 
 
 def _verify_rows(
-    rows: Sequence[tuple[object, ...]], start: PolicyState, operators: frozenset[str]
+    rows: Sequence[tuple[object, ...]],
+    start: PolicyState,
+    operators: frozenset[str],
+    auth: Authenticator,
 ) -> tuple[PolicyState, list[VerifyIssue]]:
     state = start
     expected_seq = start.last_sequence + 1
@@ -219,6 +261,10 @@ def _verify_rows(
             break
         if event.actor_id not in operators:
             issues.append(VerifyIssue(VerifyCode.UNKNOWN_OPERATOR, seq, "actor not registered"))
+            break
+        problem = auth.check(KIND_EVENT, event.event_hash, event.actor_id)
+        if problem is not None:
+            issues.append(VerifyIssue(VerifyCode.SIGNATURE_INVALID, seq, problem))
             break
         events.append(event)
     if issues:
@@ -253,10 +299,13 @@ def verify_connection(conn: sqlite3.Connection) -> VerificationReport:
     except SchemaError as exc:
         return _schema_report(str(exc))
     with read_transaction(conn):
+        auth = Authenticator.load(conn)
         rows = conn.execute(_SELECT_ALL).fetchall()
-        state, issues = _verify_rows(rows, EMPTY_STATE, _operators(conn))
+        state, issues = _verify_rows(rows, EMPTY_STATE, _operators(conn), auth)
         decisions = verify_decisions(conn)
-        approvals = verify_approvals(conn, _operators(conn))
+        approvals = verify_approvals(conn, _operators(conn), auth)
+    if auth.mode not in ("required", "none"):
+        issues.append(VerifyIssue(VerifyCode.SIGNATURE_INVALID, None, "signing mode missing"))
     if not decisions.ok:
         issues.append(
             VerifyIssue(VerifyCode.DECISION_LOG_INVALID, None, decisions.error or "invalid")
@@ -273,6 +322,7 @@ def verify_connection(conn: sqlite3.Connection) -> VerificationReport:
         head_hash=state.head_hash,
         state_digest=state.state_digest() if not issues else None,
         errors=tuple(issues),
+        authenticity=auth.authenticity,
     )
 
 
@@ -301,10 +351,18 @@ class PolicyReader:
         self._conn = conn
         self._state: PolicyState | None = None
         self._operators: frozenset[str] | None = None
+        self._auth: Authenticator | None = None
 
     def invalidate(self) -> None:
         self._state = None
         self._operators = None
+        self._auth = None
+
+    def authenticator(self) -> Authenticator:
+        """The ledger's authenticator (keys cached; reloaded whenever the reader reloads)."""
+        if self._auth is None:
+            self._auth = Authenticator.load(self._conn)
+        return self._auth
 
     def current_state(self) -> PolicyState:
         conn = self._conn
@@ -326,7 +384,8 @@ class PolicyReader:
             rows = conn.execute(_SELECT_AFTER, (cached.last_sequence,)).fetchall()
             # New operators may have been registered; refresh before verifying the tail.
             self._operators = _operators(conn)
-            state, issues = _verify_rows(rows, cached, self._operators)
+            self._auth = Authenticator.load(conn)
+            state, issues = _verify_rows(rows, cached, self._operators, self._auth)
             if not issues and (state.last_sequence, state.head_hash) == (head_seq, head_hash):
                 self._state = state
                 return state
@@ -336,8 +395,11 @@ class PolicyReader:
         self._state = None
         conn = self._conn
         self._operators = _operators(conn)
+        self._auth = Authenticator.load(conn)
+        if not self._auth.required and self._auth.mode != "none":
+            raise LedgerIntegrityError(_schema_report("ledger signing mode missing"))
         rows = conn.execute(_SELECT_ALL).fetchall()
-        state, issues = _verify_rows(rows, EMPTY_STATE, self._operators)
+        state, issues = _verify_rows(rows, EMPTY_STATE, self._operators, self._auth)
         if issues:
             raise LedgerIntegrityError(
                 VerificationReport(
@@ -382,11 +444,27 @@ class OperatorChannel:
         clock: TickSource,
         *,
         id_factory: IdFactory = uuid4_factory,
+        signing_key: Ed25519PrivateKey | None = None,
     ) -> None:
         validate_identifier(actor_id, "operator")
         row = conn.execute("SELECT 1 FROM operators WHERE actor_id = ?", (actor_id,)).fetchone()
         if row is None:
             raise UnknownOperatorError(f"{actor_id!r} is not a registered operator")
+        mode = signing_mode(conn)
+        if mode == "required":
+            if signing_key is None:
+                raise SigningError("this ledger is signed: the operator's private key is required")
+            reg = conn.execute(
+                "SELECT public_key FROM operator_keys WHERE actor_id = ?", (actor_id,)
+            ).fetchone()
+            if reg is None or str(reg[0]) != public_key_hex(signing_key):
+                raise SigningError(f"key does not match the registered key of {actor_id!r}")
+        elif mode == "none":
+            if signing_key is not None:
+                raise SigningError("this ledger is unsigned; refusing to imply signatures")
+        else:
+            raise SigningError("ledger signing mode missing or unknown")
+        self._key = signing_key
         self._conn = conn
         self._actor_id = actor_id
         self._clock = clock
@@ -429,6 +507,8 @@ class OperatorChannel:
                         event.canonical(),
                     ),
                 )
+                if self._key is not None:
+                    insert_signature(conn, self._key, KIND_EVENT, event.event_hash, self._actor_id)
                 state = reduce_events([event], state)
                 committed.append(event)
         self._reader.invalidate()
@@ -462,6 +542,10 @@ class OperatorChannel:
                     "expires_at": expires_at,
                 },
             )
+            if self._key is not None:
+                insert_signature(
+                    conn, self._key, KIND_APPROVAL, approval.approval_hash, self._actor_id
+                )
         return approval
 
     def current_state(self) -> PolicyState:

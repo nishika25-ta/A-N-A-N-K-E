@@ -11,7 +11,7 @@
 | [0007](0007-research-positioning.md) | Reposition as policy-transition × compaction benchmark | **Accepted (owner, session 6)** |
 | [0008](0008-identity-binding.md) | Identity bound by AgentPort, never by the proposal | Accepted (v0) |
 | [0009](0009-idempotency-and-failure-semantics.md) | Idempotency binds committed effects; failures are recorded or raised | Accepted (v0) |
-| [0010](0010-operator-signatures.md) | Operator signatures + external checkpoints | **Proposed: threat-model change, owner decision** |
+| [0010](0010-operator-signatures.md) | Operator signatures + external checkpoints | **Accepted and implemented (session 7)** |
 | [0011](0011-belief-agent-model.md) | Deterministic belief agent for offline memory evaluation | Accepted (v0); not an LLM model |
 | [0012](0012-generator-versioning.md) | Versioned generator; holdout pinned to v1 until regenerated | Accepted (v0) |
 

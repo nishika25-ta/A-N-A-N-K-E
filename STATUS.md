@@ -1,7 +1,7 @@
 # STATUS
 
-**Last updated:** 2026-11-25 (session 5) · **Engineering gates complete:** Phases 0, 1, 2, 3, 4, plus the Phase 5 prep that needs no owner decision.
-**Owner decisions:** ADR-0007 **accepted** (session 6). Pending: ADR-0010 (operator signatures: a threat-model change), license,
+**Last updated:** 2026-11-25 (session 7) · **Engineering gates complete:** Phases 0, 1, 2, 3, 4, plus the Phase 5 prep that needs no owner decision.
+**Owner decisions:** ADR-0007 **accepted** (session 6), ADR-0010 **accepted and implemented** (session 7). Pending: license,
 the real-model arm (cost), commit/push approval.
 **Scientific results:** none. There is a **dev-split engineering pilot v2** with a deterministic belief agent
 (`research/pilot-dev-report.md`). The holdout is **regenerated at generator v2 (72 scenarios) and locked**, and a preregistration is not frozen.
@@ -16,6 +16,26 @@ the real-model arm (cost), commit/push approval.
 | 3 | Memory entries + conservative labels; token estimator; budgeted assembler (`BUDGET_EXCEEDED`, never truncate policy); M0–M5 + 3 ablations; projection; belief agent; recall harness | **Done (session 3)** |
 | 4 | Scenario DSL; ≥30 dev + ≥30 holdout fixtures by family with a frozen checksummed manifest; independent oracle; runner (G0/G1); metrics with num/den + clustered CIs; deterministic runs; bench CLI | **Done (session 3)**: 36 + 36 fixtures; "dry-run budget" is N/A until a paid provider exists |
 | 5 | Strong comparator, pilot, preregistration freeze, optional model runs | **Prep done (session 4):** budgets bind, injection family ×3, power estimate, v2 pilot. **Freeze blocked on owner decisions** |
+
+## Session 7: ADR-0010 accepted and implemented (owner decision)
+
+- **Signed ledgers:** Ed25519 operator keys (`cryptography` 46.0.7, a project-local dependency). Migration 3 adds `ledger_config`,
+  `operator_keys` and `record_signatures` (all append-only and fingerprinted). Every event and approval is signed in the same
+  transaction as the record.
+- **Fail closed** on signed ledgers in `ledger verify`, the per-decision `PolicyReader`, and the gateway approval check. Tested against
+  forged events and approvals that are unsigned, signed with an attacker key, attributed to another operator, or carry replaced
+  signatures. The session-3 "consistent forgery" limitation is **closed for signed ledgers** and still documented for unsigned ones.
+- **Signed external checkpoints** detect tail truncation and rewrites below the checkpointed heads (previously undetectable).
+- **CLI:** `ledger keygen` (0600, never overwrites), `ledger init --pubkey`, `ledger apply --key`, `ledger checkpoint`,
+  `ledger verify --checkpoint`.
+- The bench and the demo run on signed ledgers with ephemeral keys. The demo trace digest is unchanged, and the v2 pilot metrics digest is re-checked on signed
+  ledgers (see the commands table below).
+- **Measured:** p95 decision latency 1.50 ms signed against 1.81 ms unsigned in the same session (noise). Signing and appending 1,000 events takes 230 ms;
+  a cold full verify of 1,000 signed events takes 265 ms.
+- **Still out of scope:** key rotation or revocation, protected key storage, and compromised keys.
+- **Commands (this container):** `make check` exit 0: ruff clean, `87 files already formatted`, mypy `no issues found in 51 source files`,
+  **`625 passed`**. The full v2 pilot re-run on signed ledgers has metrics digest `sha256:94916e3e…293b9`, **identical** to the committed
+  `results/sample-dev-pilot-v2`.
 
 ## Session 6: ADR-0007 accepted (owner decision)
 
@@ -141,7 +161,7 @@ Environment: Linux x86_64, Python 3.13.18 via uv 0.11.32, SQLite 3.53.1, Node 22
    **All work is uncommitted, and this container is ephemeral.**
 
 ## Next task: blocked on the owner (no further dev-only work is needed for a freeze)
-1. ~~ADR-0007 (positioning)~~ **Accepted in session 6.** ADR-0010 (signatures, a threat-model change) is still pending.
+1. ~~ADR-0007 (positioning)~~ **Accepted in session 6.** ~~ADR-0010 (signatures)~~ **Accepted and implemented in session 7.**
 2. ~~Regenerate the holdout at generator v2~~ **Done in session 5** (72 scenarios, new seeds, logged re-freeze).
 3. The real-model arm: models, temperatures, repeats and a cost cap (it must have its own pilot).
 4. An independent review of the oracle, the reference model and the generator.

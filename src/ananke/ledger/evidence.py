@@ -14,6 +14,7 @@ from typing import Any, cast
 from pydantic import ValidationError
 
 from ananke.domain import GENESIS_HASH, Approval, Decision, digest
+from ananke.ledger.signing import KIND_APPROVAL, Authenticator
 
 _DECISION_COLS = (
     "sequence, decision_id, request_id, session_id, principal_id, outcome, reason_code,"
@@ -188,7 +189,9 @@ def read_approvals(conn: sqlite3.Connection) -> list[tuple[tuple[object, ...], A
     return out
 
 
-def verify_approvals(conn: sqlite3.Connection, operators: frozenset[str]) -> DecisionLogReport:
+def verify_approvals(
+    conn: sqlite3.Connection, operators: frozenset[str], auth: Authenticator | None = None
+) -> DecisionLogReport:
     """Verify the approval issuance chain: contiguity, canonical bytes, columns, hashes, issuer."""
     prev = GENESIS_HASH
     rows = read_approvals(conn)
@@ -219,6 +222,10 @@ def verify_approvals(conn: sqlite3.Connection, operators: frozenset[str]) -> Dec
             return DecisionLogReport(False, len(rows), prev, f"approval chain broken at {seq}")
         if a.issued_by not in operators:
             return DecisionLogReport(False, len(rows), prev, f"approval {seq}: unknown issuer")
+        if auth is not None:
+            problem = auth.check(KIND_APPROVAL, a.approval_hash, a.issued_by)
+            if problem is not None:
+                return DecisionLogReport(False, len(rows), prev, f"approval {seq}: {problem}")
         prev = a.approval_hash
     return DecisionLogReport(True, len(rows), prev)
 

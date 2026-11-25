@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
-from typing import Annotated, NoReturn
+from typing import Annotated, Any, NoReturn
 
 import typer
 from pydantic import TypeAdapter, ValidationError
@@ -29,18 +29,26 @@ from ananke.domain import (
 )
 from ananke.ledger import (
     EMPTY_STATE,
+    Checkpoint,
     LedgerIntegrityError,
     LedgerUnavailableError,
     OperatorChannel,
     PolicyState,
     PolicyTransitionError,
     SchemaError,
+    SigningError,
     UnknownOperatorError,
+    create_checkpoint,
+    generate_key,
     init_ledger,
+    load_private_key,
     load_state,
     open_ledger,
+    public_key_hex,
     validate_changes,
+    verify_checkpoint,
     verify_ledger,
+    write_private_key,
 )
 
 app = typer.Typer(
@@ -234,19 +242,50 @@ def demo_gateway(
 # ----------------------------------------------------------------------------- ledger
 
 
+@ledger_app.command("keygen")
+def ledger_keygen(
+    out: Annotated[Path, typer.Option("--out", help="New private key file (created 0600).")],
+) -> None:
+    """Generate an operator Ed25519 key. Prints the public key to register with `init --pubkey`."""
+    key = generate_key()
+    try:
+        write_private_key(out, key)
+    except SigningError as exc:
+        _fail("KEYGEN_FAILED", str(exc))
+    except OSError as exc:
+        _fail("KEYGEN_FAILED", exc.strerror or str(exc), EXIT_UNAVAILABLE)
+    _emit({"status": "ok", "private_key_file": out.name, "public_key": public_key_hex(key)})
+
+
 @ledger_app.command("init")
 def ledger_init(
     db: DbOpt,
     operator: Annotated[
         list[str], typer.Option("--operator", help="Operator identity (repeatable).")
     ],
+    pubkey: Annotated[
+        list[str] | None,
+        typer.Option("--pubkey", help="Public key hex per operator, same order (signed ledger)."),
+    ] = None,
 ) -> None:
-    """Create a new ledger with registered operator identities (trusted setup)."""
+    """Create a new ledger. With --pubkey for every operator it is a signed ledger (ADR-0010)."""
+    keys = None
+    if pubkey:
+        if len(pubkey) != len(operator):
+            _fail("INIT_FAILED", "give exactly one --pubkey per --operator, in the same order")
+        keys = dict(zip(operator, pubkey, strict=True))
     try:
-        init_ledger(db, operator)
+        init_ledger(db, operator, public_keys=keys)
     except (LedgerUnavailableError, ValueError, sqlite3.Error) as exc:
         _fail("INIT_FAILED", str(exc))
-    _emit({"status": "ok", "db": db.name, "operators": sorted(operator)})
+    _emit(
+        {
+            "status": "ok",
+            "db": db.name,
+            "operators": sorted(operator),
+            "authenticity": "signed" if keys else "unsigned",
+        }
+    )
 
 
 @ledger_app.command("apply")
@@ -257,18 +296,24 @@ def ledger_apply(
     at: Annotated[
         int, typer.Option("--at", min=0, max=MAX_SAFE_INT, help="Logical tick of recording.")
     ],
+    key: Annotated[
+        Path | None, typer.Option("--key", help="Operator private key (required if signed).")
+    ] = None,
 ) -> None:
     """Append policy changes atomically through the operator channel (all or nothing)."""
     parsed = _read_changes(changes)
+    signing_key = _load_key(key)
     try:
         conn = open_ledger(db)
     except (LedgerUnavailableError, SchemaError) as exc:
         _fail("LEDGER_UNAVAILABLE", str(exc), EXIT_UNAVAILABLE)
     try:
-        channel = OperatorChannel(conn, operator, lambda: at)
+        channel = OperatorChannel(conn, operator, lambda: at, signing_key=signing_key)
         events = channel.submit_many(parsed)
     except (UnknownOperatorError, InvalidIdentifierError) as exc:
         _fail("UNKNOWN_OPERATOR", str(exc))
+    except SigningError as exc:
+        _fail("SIGNATURE_REQUIRED", str(exc))
     except PolicyTransitionError as exc:
         _fail(exc.code.value, exc.detail)
     except LedgerIntegrityError as exc:
@@ -298,29 +343,102 @@ def ledger_apply(
 
 
 @ledger_app.command("verify")
-def ledger_verify(db: DbOpt) -> None:
-    """Verify chains (policy, approvals, decisions) and audit all evidence by replay.
+def ledger_verify(
+    db: DbOpt,
+    checkpoint: Annotated[
+        list[Path] | None,
+        typer.Option("--checkpoint", help="Signed checkpoint file(s) to verify against."),
+    ] = None,
+) -> None:
+    """Verify chains and signatures, audit all evidence by replay, and check checkpoints.
 
-    Exit 0 if everything is consistent, 1 on any integrity or audit failure, 2 if unavailable.
+    Exit 0 if everything is consistent, 1 on any integrity, signature, audit or checkpoint
+    failure, 2 if unavailable.
     """
     try:
         report = verify_ledger(db)
         audit = audit_ledger(db) if report.ok else None
+        cp_results = _check_checkpoints(db, checkpoint or [])
     except LedgerUnavailableError as exc:
         _fail("LEDGER_UNAVAILABLE", str(exc), EXIT_UNAVAILABLE)
     except sqlite3.DatabaseError as exc:
         _fail("LEDGER_CORRUPT", f"database file is not a valid ledger: {exc}")
-    ok = report.ok and audit is not None and audit.ok
+    cp_ok = all(not r["problems"] for r in cp_results)
+    ok = report.ok and audit is not None and audit.ok and cp_ok
     _emit(
         {
             "status": "ok" if ok else "fail",
             **report.as_dict(),
             "ok": ok,
             "audit": audit.as_dict() if audit is not None else None,
+            "checkpoints": cp_results,
         }
     )
     if not ok:
         raise typer.Exit(code=EXIT_FAIL)
+
+
+@ledger_app.command("checkpoint")
+def ledger_checkpoint(
+    db: DbOpt,
+    operator: Annotated[str, typer.Option("--operator")],
+    key: Annotated[Path, typer.Option("--key", help="Operator private key.")],
+    at: Annotated[int, typer.Option("--at", min=0, max=MAX_SAFE_INT)],
+    out: Annotated[Path, typer.Option("--out", help="Checkpoint file (store it off the host).")],
+) -> None:
+    """Sign the current chain heads into an external checkpoint (detects later truncation)."""
+    signing_key = _load_key(key)
+    try:
+        conn = open_ledger(db)
+    except (LedgerUnavailableError, SchemaError) as exc:
+        _fail("LEDGER_UNAVAILABLE", str(exc), EXIT_UNAVAILABLE)
+    try:
+        cp = create_checkpoint(conn, actor_id=operator, key=signing_key, tick=at)
+    except SigningError as exc:
+        _fail("CHECKPOINT_FAILED", str(exc))
+    finally:
+        conn.close()
+    try:
+        with out.open("x", encoding="utf-8") as fh:
+            fh.write(cp.model_dump_json(indent=2) + "\n")
+    except FileExistsError:
+        _fail("CHECKPOINT_FAILED", f"refusing to overwrite {out.name}")
+    _emit(
+        {
+            "status": "ok",
+            "checkpoint": out.name,
+            "event_sequence": cp.event_sequence,
+            "approval_sequence": cp.approval_sequence,
+            "decision_sequence": cp.decision_sequence,
+        }
+    )
+
+
+def _load_key(path: Path | None) -> Any:
+    if path is None:
+        return None
+    try:
+        return load_private_key(path)
+    except SigningError as exc:
+        _fail("KEY_INVALID", str(exc), EXIT_UNAVAILABLE)
+
+
+def _check_checkpoints(db: Path, files: list[Path]) -> list[dict[str, object]]:
+    results: list[dict[str, object]] = []
+    if not files:
+        return results
+    conn = open_ledger(db)
+    try:
+        for f in files:
+            try:
+                cp = Checkpoint.model_validate_json(f.read_bytes())
+                problems = verify_checkpoint(conn, cp)
+            except (OSError, ValidationError) as exc:
+                problems = [f"unreadable checkpoint: {type(exc).__name__}"]
+            results.append({"file": f.name, "problems": problems})
+    finally:
+        conn.close()
+    return results
 
 
 @ledger_app.command("show")

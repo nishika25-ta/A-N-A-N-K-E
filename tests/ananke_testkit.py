@@ -78,14 +78,26 @@ def supersede(target: str, rule_id: str, **kw: Any) -> PolicyChange:
 
 
 class Lab:
-    """A fresh ledger with a logical clock and an operator channel."""
+    """A fresh ledger with a logical clock and an operator channel (``signed`` = ADR-0010)."""
 
-    def __init__(self, tmp: Path, operators: tuple[str, ...] = (OPERATOR,)) -> None:
+    def __init__(
+        self, tmp: Path, operators: tuple[str, ...] = (OPERATOR,), *, signed: bool = False
+    ) -> None:
+        from ananke.ledger import generate_key, public_key_hex
+
         self.path = tmp / "ledger.sqlite"
-        init_ledger(self.path, operators)
+        self.keys = {op: generate_key() for op in operators} if signed else {}
+        pubs = {op: public_key_hex(k) for op, k in self.keys.items()}
+        init_ledger(self.path, operators, public_keys=pubs or None)
         self.clock = LogicalClock()
         self.conn = open_ledger(self.path)
-        self.operator = OperatorChannel(self.conn, OPERATOR, self.clock.now, id_factory=seq_ids())
+        self.operator = OperatorChannel(
+            self.conn,
+            OPERATOR,
+            self.clock.now,
+            id_factory=seq_ids(),
+            signing_key=self.keys.get(OPERATOR),
+        )
 
     def close(self) -> None:
         self.conn.close()
@@ -139,12 +151,13 @@ class GatewayLab(Lab):
         hooks: dict[str, Callable[[], None]] | None = None,
         session: str = "s1",
         principal: str = AGENT,
+        signed: bool = False,
     ) -> None:
         from ananke.lab import seed_records
         from ananke.ledger.db import write_transaction
         from ananke.runtime import AgentPort, Gateway
 
-        super().__init__(tmp)
+        super().__init__(tmp, signed=signed)
         with write_transaction(self.conn) as c:
             seed_records(c, FIXTURES)
         self.gateway = Gateway(self.conn, self.clock.now, id_factory=seq_ids(7), hooks=hooks)

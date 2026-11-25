@@ -136,7 +136,7 @@ def _steer_request(
 @given(st.lists(steps(), min_size=1, max_size=40))
 def test_gateway_agrees_with_reference_model(program: list[tuple[str, Any]]) -> None:
     with tempfile.TemporaryDirectory() as tmp:
-        lab = GatewayLab(Path(tmp))
+        lab = GatewayLab(Path(tmp), signed=True)  # exercise the ADR-0010 path
         ports = {
             p: AgentPort(lab.gateway, principal_id=p, session_id="s1", id_factory=seq_ids(20 + i))
             for i, p in enumerate(PRINCIPALS)

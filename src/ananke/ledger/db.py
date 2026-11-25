@@ -150,6 +150,36 @@ CREATE TABLE lab_effects (
         + _append_only("idempotency")
         + _append_only("lab_effects"),
     ),
+    Migration(
+        3,
+        "operator_signatures",
+        """
+-- Ledger-wide settings written once at trusted setup: 'signing' (required|none), 'ledger_id'.
+CREATE TABLE ledger_config (
+  key    TEXT PRIMARY KEY,
+  value  TEXT NOT NULL
+) STRICT;
+
+-- Ed25519 public keys of operators (ADR-0010). Private keys never enter the database.
+CREATE TABLE operator_keys (
+  actor_id      TEXT PRIMARY KEY REFERENCES operators(actor_id),
+  public_key    TEXT NOT NULL CHECK (length(public_key) = 64),
+  registered_at INTEGER NOT NULL CHECK (registered_at >= 0)
+) STRICT;
+
+-- One signature per authority record, over its record hash (domain-separated by kind).
+CREATE TABLE record_signatures (
+  record_kind  TEXT NOT NULL CHECK (record_kind IN ('policy-event', 'approval')),
+  record_hash  TEXT NOT NULL,
+  actor_id     TEXT NOT NULL REFERENCES operators(actor_id),
+  signature    TEXT NOT NULL CHECK (length(signature) = 128),
+  PRIMARY KEY (record_kind, record_hash)
+) STRICT;
+"""
+        + _append_only("ledger_config")
+        + _append_only("operator_keys")
+        + _append_only("record_signatures"),
+    ),
 )
 
 LATEST_VERSION = MIGRATIONS[-1].version
@@ -169,6 +199,12 @@ EXPECTED_TRIGGERS = frozenset(
         "idempotency_no_delete",
         "lab_effects_no_update",
         "lab_effects_no_delete",
+        "ledger_config_no_update",
+        "ledger_config_no_delete",
+        "operator_keys_no_update",
+        "operator_keys_no_delete",
+        "record_signatures_no_update",
+        "record_signatures_no_delete",
     }
 )
 

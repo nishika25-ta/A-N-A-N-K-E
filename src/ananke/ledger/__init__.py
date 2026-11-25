@@ -8,6 +8,7 @@ Public surface:
 * pure semantics: :func:`reduce_events`, :func:`apply_event`, :class:`PolicyState`
 """
 
+from ananke.ledger.checkpoint import Checkpoint, create_checkpoint, verify_checkpoint
 from ananke.ledger.db import LedgerUnavailableError, SchemaError
 from ananke.ledger.reducer import (
     EMPTY_STATE,
@@ -18,6 +19,13 @@ from ananke.ledger.reducer import (
     build_event,
     check_change,
     reduce_events,
+)
+from ananke.ledger.signing import (
+    SigningError,
+    generate_key,
+    load_private_key,
+    public_key_hex,
+    write_private_key,
 )
 from ananke.ledger.store import (
     LedgerIntegrityError,
@@ -36,6 +44,7 @@ from ananke.ledger.store import (
 
 __all__ = [
     "EMPTY_STATE",
+    "Checkpoint",
     "LedgerIntegrityError",
     "LedgerUnavailableError",
     "OperatorChannel",
@@ -43,6 +52,7 @@ __all__ = [
     "PolicyState",
     "PolicyTransitionError",
     "SchemaError",
+    "SigningError",
     "TransitionError",
     "UnknownOperatorError",
     "VerificationReport",
@@ -50,11 +60,17 @@ __all__ = [
     "apply_event",
     "build_event",
     "check_change",
+    "create_checkpoint",
+    "generate_key",
     "init_ledger",
+    "load_private_key",
     "load_state",
     "open_ledger",
+    "public_key_hex",
     "reduce_events",
     "validate_changes",
+    "verify_checkpoint",
     "verify_connection",
     "verify_ledger",
+    "write_private_key",
 ]

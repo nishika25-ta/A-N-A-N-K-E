@@ -35,6 +35,7 @@ from ananke.lab import REGISTRY, ToolError, ToolSpec
 from ananke.ledger import LedgerIntegrityError, LedgerUnavailableError, PolicyReader, PolicyState
 from ananke.ledger.db import write_transaction
 from ananke.ledger.evidence import append_decision, consume_approval, load_approval
+from ananke.ledger.signing import KIND_APPROVAL
 from ananke.ledger.store import IdFactory, TickSource, uuid4_factory
 from ananke.policy import evaluate
 
@@ -230,8 +231,15 @@ class Gateway:
                     conn, fields, Outcome.NEEDS_APPROVAL, ReasonCode.APPROVAL_REQUIRED
                 )
             fields["approval_id"] = request.approval_id
+            lookup = load_approval(conn, request.approval_id)
+            auth = self._reader.authenticator()
+            if lookup is not None and auth.required:
+                # Signed ledger: an approval without a valid issuer signature authorizes nothing.
+                appr = lookup[0]
+                if auth.check(KIND_APPROVAL, appr.approval_hash, appr.issued_by) is not None:
+                    lookup = None
             denial = check_approval(
-                load_approval(conn, request.approval_id),
+                lookup,
                 request=request,
                 action_digest=base["action_digest"],
                 state=state,
