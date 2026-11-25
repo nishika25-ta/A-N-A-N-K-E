@@ -1,6 +1,7 @@
-# ADR-0007: Reposition as a policy-transition × compaction benchmark (PROPOSED)
+# ADR-0007: Reposition as a policy-transition × compaction benchmark (ACCEPTED)
 
-**Status.** Proposed. It needs an owner decision before preregistration (Phase 5). It does **not** block Phases 1 to 4.
+**Status.** **Accepted by the owner** (2026-11-25, session 6). The decision below is in force, and the preregistration's research
+questions are written under it. MASTERPLAN.md is unchanged; this ADR records the repositioning against it.
 
 **Context.** The Phase 0 search (research/related-work.md; secondary evidence only, as primary texts were unreachable) found prior art for every ANANKE component:
 - compaction erodes rules: Compaction Cliff 2608.22752, Governance Decay 2606.22528, ARCBench (Nov 2026), Ghost in the Context 2605.12535;
@@ -18,7 +19,7 @@ policy transitions with a *compaction schedule* at matched budgets, plus a possi
 **revocation-aware compaction** mechanism that uses provenance to purge memory derived from revoked
 resources. Both are unconfirmed until the primary texts are read.
 
-**Decision (proposed).** Make the primary contribution a controlled benchmark and comparative study: policy transitions {revoke, expire, supersede or narrow, regrant} × timing relative to compaction × compaction count × matched budget. It keeps three endpoints separate: recall, proposal and committed effect. M4 is labelled a Constraint-Pinning-style baseline, and G1 a CommitGuard-style monitor (approximate reimplementations, not official). M5 is one candidate under test, and a null result is publishable.
+**Decision (accepted).** Make the primary contribution a controlled benchmark and comparative study: policy transitions {revoke, expire, supersede or narrow, regrant} × timing relative to compaction × compaction count × matched budget. It keeps three endpoints separate: recall, proposal and committed effect. M4 is labelled a Constraint-Pinning-style baseline, and G1 a CommitGuard-style monitor (approximate reimplementations, not official). M5 is one candidate under test, and a null result is publishable.
 
 **Alternatives.** (a) Keep the original "novel runtime" framing. This is not supportable given the prior art. (b) Pure reproduction of ARCBench or Governance Decay. This is feasible as a component, but needs their code and licenses.
 

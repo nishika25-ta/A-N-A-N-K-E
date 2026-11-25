@@ -19,7 +19,7 @@ The model and its summaries never grant privileges. Enforcement succeeding is a 
 and the benchmark reports them separately (G0 vs G1 with memory held fixed).
 
 Prior art covers every component individually; see [`research/related-work.md`](research/related-work.md). The proposed
-contribution is a controlled policy-transition × compaction benchmark (ADR-0007, pending owner review).
+contribution is a controlled policy-transition × compaction benchmark (ADR-0007, accepted by the owner).
 "ANANKE" is a research codename. Other products already use the name, and no affiliation is claimed.
 
 ## Quickstart (offline, no network, no model calls)

@@ -124,7 +124,7 @@ if the primary texts of #1–#3, #27, #29 and #31 show it is absent:
    warnings) vs Constraint-Pinning-style full re-injection at tight budgets. This is a narrow question and
    could well return a null result. That would be a legitimate result to publish.
 
-## 4. Proposed pivot (needs owner decision; see ADR-0007)
+## 4. Accepted repositioning (owner decision, ADR-0007)
 
 Reposition ANANKE from "a new revocation-aware runtime" to **a controlled benchmark and comparative study of
 policy transitions under repeated context compaction**. Working title: *Do Agents Remember Revocations? A

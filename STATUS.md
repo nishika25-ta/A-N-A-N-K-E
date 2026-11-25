@@ -1,7 +1,7 @@
 # STATUS
 
 **Last updated:** 2026-11-25 (session 5) · **Engineering gates complete:** Phases 0, 1, 2, 3, 4, plus the Phase 5 prep that needs no owner decision.
-**Owner decisions pending:** ADR-0007 (positioning), ADR-0010 (operator signatures: a threat-model change), license,
+**Owner decisions:** ADR-0007 **accepted** (session 6). Pending: ADR-0010 (operator signatures: a threat-model change), license,
 the real-model arm (cost), commit/push approval.
 **Scientific results:** none. There is a **dev-split engineering pilot v2** with a deterministic belief agent
 (`research/pilot-dev-report.md`). The holdout is **regenerated at generator v2 (72 scenarios) and locked**, and a preregistration is not frozen.
@@ -16,6 +16,11 @@ the real-model arm (cost), commit/push approval.
 | 3 | Memory entries + conservative labels; token estimator; budgeted assembler (`BUDGET_EXCEEDED`, never truncate policy); M0–M5 + 3 ablations; projection; belief agent; recall harness | **Done (session 3)** |
 | 4 | Scenario DSL; ≥30 dev + ≥30 holdout fixtures by family with a frozen checksummed manifest; independent oracle; runner (G0/G1); metrics with num/den + clustered CIs; deterministic runs; bench CLI | **Done (session 3)**: 36 + 36 fixtures; "dry-run budget" is N/A until a paid provider exists |
 | 5 | Strong comparator, pilot, preregistration freeze, optional model runs | **Prep done (session 4):** budgets bind, injection family ×3, power estimate, v2 pilot. **Freeze blocked on owner decisions** |
+
+## Session 6: ADR-0007 accepted (owner decision)
+
+- The ADR status is now Accepted, and the ADR index, related-work section 4 and README are updated. MASTERPLAN.md is unchanged.
+- The preregistration draft now states RQ1 to RQ3 concretely under the accepted framing (it remains `Status: DRAFT`).
 
 ## Session 5 work: holdout regenerated at v2 (owner decision)
 
@@ -136,7 +141,7 @@ Environment: Linux x86_64, Python 3.13.18 via uv 0.11.32, SQLite 3.53.1, Node 22
    **All work is uncommitted, and this container is ephemeral.**
 
 ## Next task: blocked on the owner (no further dev-only work is needed for a freeze)
-1. ADR-0007 (positioning) and ADR-0010 (signatures, a threat-model change).
+1. ~~ADR-0007 (positioning)~~ **Accepted in session 6.** ADR-0010 (signatures, a threat-model change) is still pending.
 2. ~~Regenerate the holdout at generator v2~~ **Done in session 5** (72 scenarios, new seeds, logged re-freeze).
 3. The real-model arm: models, temperatures, repeats and a cost cap (it must have its own pilot).
 4. An independent review of the oracle, the reference model and the generator.

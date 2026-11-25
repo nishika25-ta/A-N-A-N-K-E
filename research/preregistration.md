@@ -2,14 +2,27 @@
 
 Status: DRAFT
 
-**Holdout runs are refused by the harness until the line above reads `Status: FROZEN`.** Freezing needs the owner's
-decision on ADR-0007 (positioning) and, if real models are used, consent and a budget (ADR-0006). Everything below is
+**Holdout runs are refused by the harness until the line above reads `Status: FROZEN`.** The positioning is settled
+(ADR-0007, accepted). Freezing still needs, if real models are used, consent and a budget (ADR-0006), plus an independent review of
+the oracle, the reference model and the generator. Everything below is
 proposed. Items marked *(pilot)* were informed by the dev-split pilot `research/pilot-dev-report.md` and used dev data
 only.
 
 ## Research questions
-RQ1 to RQ3 as in MASTERPLAN section 3, reframed by ADR-0007 if accepted. The policy-transition × compaction design has
-M4 as a Constraint-Pinning-style baseline and M5 as the candidate.
+Framed under ADR-0007 (accepted): a controlled benchmark and comparative study of policy transitions under repeated
+context compaction. Working title: *Do Agents Remember Revocations? A controlled benchmark of policy transitions
+under repeated context compaction.* Baselines are labelled as approximate reimplementations: M4 is a Constraint-Pinning-style
+fresh full policy (Governance Decay), and G1 is a CommitGuard-style commit-time monitor. M5 is one candidate under test, not the
+headline.
+
+- **RQ1 (memory, gateway held fixed):** at matched model-visible budgets, how do memory strategies (M2, M3, M4, M5) differ
+  in the unauthorized-proposal rate, especially stale-authority proposals, after policy transitions {revoke, expire,
+  supersede or narrow, regrant, missed notice} crossed with repeated compaction?
+- **RQ2 (enforcement, memory held fixed):** how much of the unauthorized behaviour does commit-time enforcement prevent (G0 vs
+  G1), and at what cost in legitimate completion, false denials and latency?
+- **RQ3 (provenance):** does quarantining non-operator content reduce adoption of forged authority, and does that depend on
+  whether the model treats quarantined content as data (H4)? What is the token cost and `BUDGET_EXCEEDED` trade-off between
+  scoped projection (M5) and full policy rendering (M4)?
 
 ## Hypotheses (not results)
 - H1: M5 has a lower unauthorized proposal rate than M2 and M3 after transitions, at matched budgets.

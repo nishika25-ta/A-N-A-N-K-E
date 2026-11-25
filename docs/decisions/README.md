@@ -8,7 +8,7 @@
 | [0004](0004-token-accounting.md) | Token accounting and matched budgets | Accepted (v0) |
 | [0005](0005-scope-exclusions.md) | MVP scope exclusions | Accepted (v0) |
 | [0006](0006-provider-integration.md) | Scripted provider first; paid/remote gated | Accepted (v0) |
-| [0007](0007-research-positioning.md) | Reposition as policy-transition × compaction benchmark | **Proposed: owner decision needed** |
+| [0007](0007-research-positioning.md) | Reposition as policy-transition × compaction benchmark | **Accepted (owner, session 6)** |
 | [0008](0008-identity-binding.md) | Identity bound by AgentPort, never by the proposal | Accepted (v0) |
 | [0009](0009-idempotency-and-failure-semantics.md) | Idempotency binds committed effects; failures are recorded or raised | Accepted (v0) |
 | [0010](0010-operator-signatures.md) | Operator signatures + external checkpoints | **Proposed: threat-model change, owner decision** |
