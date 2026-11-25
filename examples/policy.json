@@ -1,0 +1,8 @@
+[
+  {"kind": "GRANT", "rule_id": "grant-001", "principal_id": "agent-lab-01", "tool_id": "ticket",
+   "operation": "read", "resource_scope": "ticket:demo-42", "valid_from": 0, "valid_until": 20,
+   "requires_approval": false, "reason": "initial synthetic read grant"},
+  {"kind": "DENY", "rule_id": "deny-001", "principal_id": "agent-lab-01", "tool_id": "report",
+   "operation": "publish_mock", "resource_scope": "report:demo-q3", "valid_from": 0,
+   "reason": "publishing prohibited"}
+]

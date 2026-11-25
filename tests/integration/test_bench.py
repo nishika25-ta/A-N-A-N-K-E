@@ -1,0 +1,206 @@
+"""Phase 4: generator, frozen manifests, holdout lock, runner invariants, CLI contracts."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+from typer.testing import CliRunner
+
+from ananke.bench.config import BenchConfig
+from ananke.bench.generator import FAMILIES, generate
+from ananke.bench.run import HoldoutLockedError, execute
+from ananke.bench.runner import Condition, GatewayMode, run_matrix
+from ananke.bench.scenario import CheckpointStep, Split
+from ananke.bench.store import ScenarioStoreError, load_split, write_scenarios
+from ananke.cli import app
+from ananke.memory import StrategyId
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_generator_is_deterministic_and_balanced() -> None:
+    a, b = generate(Split.DEV), generate(Split.DEV)
+    assert [s.checksum() for s in a] == [s.checksum() for s in b]
+    assert len(a) == 36 and {s.family for s in a} == {f.replace("_", "-") for f in FAMILIES}
+    for fam in {s.family for s in a}:
+        assert sum(s.family == fam for s in a) == 4
+
+
+def test_dev_and_holdout_share_no_entities_or_templates() -> None:
+    dev, hold = generate(Split.DEV), generate(Split.HOLDOUT)
+
+    def entities(ss: list) -> set[str]:  # type: ignore[type-arg]
+        return {r for s in ss for r in s.fixtures} | {s.principal for s in ss}
+
+    assert not entities(dev) & entities(hold)
+    assert {s.template for s in dev}.isdisjoint({s.template for s in hold})
+
+
+def test_every_family_has_eligible_checkpoints() -> None:
+    for s in generate(Split.DEV):
+        cps = [x for x in s.timeline if isinstance(x, CheckpointStep)]
+        assert cps and any(c.eligible for c in cps), s.scenario_id
+
+
+def test_committed_scenarios_match_generator_and_verify() -> None:
+    for split in Split:
+        files = {s.scenario_id: s.checksum() for s in load_split(ROOT / "scenarios", split)}
+        assert files == {s.scenario_id: s.checksum() for s in generate(split)}
+
+
+def test_tampered_holdout_file_is_rejected(tmp_path: Path) -> None:
+    write_scenarios(tmp_path)
+    victim = next((tmp_path / "holdout").glob("*.json"))
+    data = json.loads(victim.read_text())
+    data["description"] = "tuned"
+    victim.write_text(json.dumps(data, sort_keys=True, separators=(",", ":")) + "\n")
+    with pytest.raises(ScenarioStoreError):
+        load_split(tmp_path, Split.HOLDOUT)
+
+
+def test_frozen_holdout_cannot_be_regenerated_differently(tmp_path: Path) -> None:
+    write_scenarios(tmp_path)
+    frozen = tmp_path / "holdout.manifest.json"
+    frozen.write_text(
+        frozen.read_text().replace('"manifest_digest":"sha256:', '"manifest_digest":"sha256:0')
+    )
+    with pytest.raises(ScenarioStoreError, match="frozen"):
+        write_scenarios(tmp_path)
+
+
+def test_holdout_is_locked_without_frozen_preregistration(tmp_path: Path) -> None:
+    cfg = BenchConfig(name="x", split=Split.HOLDOUT, strategies=(StrategyId.M5,), budgets=(900,))
+    (tmp_path / "research").mkdir()
+    (tmp_path / "research" / "preregistration.md").write_text("Status: DRAFT")
+    with pytest.raises(HoldoutLockedError):
+        execute(cfg, scenarios_root=ROOT / "scenarios", out_root=tmp_path, repo_root=tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("text", "frozen"),
+    [
+        ("Status: DRAFT", False),
+        ("Status: DRAFT\nRuns are refused until the line reads `Status: FROZEN`.", False),
+        ("Intro mentions Status: FROZEN in prose\nStatus: DRAFT", False),
+        ("No status line at all", False),
+        ("Status: FROZEN  ", True),
+        ("Status: FROZEN\nStatus: DRAFT", True),
+    ],
+)
+def test_holdout_unlock_requires_exact_first_status_line(
+    tmp_path: Path, text: str, frozen: bool
+) -> None:
+    from ananke.bench.run import preregistration_frozen
+
+    (tmp_path / "research").mkdir()
+    (tmp_path / "research" / "preregistration.md").write_text(text)
+    assert preregistration_frozen(tmp_path) is frozen
+
+
+def test_repository_preregistration_is_not_frozen() -> None:
+    from ananke.bench.run import preregistration_frozen
+
+    assert preregistration_frozen(ROOT) is False  # the holdout must stay locked in this phase
+
+
+def test_enforced_runs_hold_every_invariant_across_all_strategies() -> None:
+    """G1 over all dev scenarios x all strategies x two budgets x both agent variants:
+    oracle and gateway agree on every proposal, no unauthorized effect, no false denial, and every
+    run's evidence replays (the runner audits each ledger)."""
+    conds = [
+        Condition(s, GatewayMode.G1, b, q)
+        for s in StrategyId
+        for b in (500, 1800)
+        for q in (True, False)
+    ]
+    recs = list(run_matrix(generate(Split.DEV), conds))
+    assert len(recs) == len(conds) * 60  # 60 checkpoints per dev split (52 eligible)
+    assert not any(r.oracle_gateway_disagree for r in recs)
+    assert not any(r.unauthorized_effect for r in recs)
+    assert not any(r.false_denial for r in recs)
+    assert any(r.unauthorized_proposal for r in recs)  # non-vacuous: proposals were attempted
+    assert any(r.budget_exceeded for r in recs)
+
+
+def test_unenforced_lab_mode_shows_what_enforcement_prevents() -> None:
+    dev = generate(Split.DEV)
+    g0 = list(run_matrix(dev, [Condition(StrategyId.M2, GatewayMode.G0, 900)]))
+    g1 = list(run_matrix(dev, [Condition(StrategyId.M2, GatewayMode.G1, 900)]))
+    assert [r.proposed for r in g0] == [r.proposed for r in g1]  # memory fixed: same proposals
+    assert sum(r.unauthorized_effect for r in g0) == sum(r.unauthorized_proposal for r in g0) > 0
+    assert sum(r.unauthorized_effect for r in g1) == 0
+
+
+def test_cli_bench_contract(tmp_path: Path) -> None:
+    runner = CliRunner()
+    cfg = tmp_path / "c.json"
+    cfg.write_text(
+        json.dumps(
+            {
+                "name": "t",
+                "split": "dev",
+                "strategies": ["M5_PROJECTION"],
+                "budgets": [900],
+                "families": ["revocation"],
+                "bootstrap_resamples": 100,
+            }
+        )
+    )
+    r1 = runner.invoke(
+        app,
+        [
+            "bench",
+            "run",
+            "--config",
+            str(cfg),
+            "--offline",
+            "--scenarios",
+            str(ROOT / "scenarios"),
+            "--out",
+            str(tmp_path),
+        ],
+    )
+    assert r1.exit_code == 0, r1.output
+    out = json.loads(r1.output)
+    r2 = runner.invoke(
+        app,
+        [
+            "bench",
+            "run",
+            "--config",
+            str(cfg),
+            "--offline",
+            "--scenarios",
+            str(ROOT / "scenarios"),
+            "--out",
+            str(tmp_path),
+        ],
+    )
+    assert json.loads(r2.output)["metrics_digest"] == out["metrics_digest"]  # reproducible
+    rep = runner.invoke(app, ["bench", "report", "--run-dir", out["run_dir"]])
+    assert rep.exit_code == 0 and "unauthorized_proposal_rate" in rep.output
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"name": "x"}')
+    assert runner.invoke(app, ["bench", "run", "--config", str(bad)]).exit_code == 1
+    locked = runner.invoke(
+        app,
+        [
+            "bench",
+            "run",
+            "--config",
+            str(ROOT / "research/experiments/holdout-locked.json"),
+            "--scenarios",
+            str(ROOT / "scenarios"),
+            "--out",
+            str(tmp_path),
+        ],
+    )
+    assert locked.exit_code == 2 and "HOLDOUT_LOCKED" in locked.output
+    assert (
+        runner.invoke(
+            app, ["bench", "verify-scenarios", "--root", str(ROOT / "scenarios")]
+        ).exit_code
+        == 0
+    )

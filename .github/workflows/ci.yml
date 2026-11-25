@@ -1,0 +1,25 @@
+# Offline deterministic CI. No model calls, no secrets, no network beyond package install.
+# Status: authored locally, NOT yet executed on GitHub (see STATUS.md).
+name: ci
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - run: uv run ruff check src tests research
+      - run: uv run ruff format --check src tests research
+      - run: uv run mypy
+      - run: uv run pytest
+      - run: uv run ananke selfcheck --offline
+      - run: uv run ananke demo-gateway --offline --seed 42
+      - run: uv run ananke bench verify-scenarios --root scenarios
+      - run: uv run ananke bench run --config research/experiments/smoke.json --offline

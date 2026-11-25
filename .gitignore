@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# Local state and traces (never commit)
+.ananke/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+results/raw/
+results/traces/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Node (future Studio)
+node_modules/
+.next/
+
+# Benchmark runs (regenerable; large)
+results/runs/

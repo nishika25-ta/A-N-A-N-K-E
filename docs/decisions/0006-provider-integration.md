@@ -1,0 +1,3 @@
+# ADR-0006: Scripted provider first; paid/remote providers gated
+
+**Decision.** The default provider is a deterministic scripted agent. It tests the logic, not LLM efficacy. Paid or remote adapters are implemented only after Phase 4. Running one requires all of the following: `--allow-paid`, an explicit provider and model, token, call and run caps, a maximum cost bound with price metadata (or an explicit user bound), a dry-run estimate, and owner consent. There is no automatic fallback to paid services. CI never holds keys or makes model calls. Any Claude Code adapter is observational or opt-in, and covers only gateway-mediated tools (Phase 8, version-checked against the installed CLI, currently 2.1.332).

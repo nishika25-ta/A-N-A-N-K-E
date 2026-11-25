@@ -1,0 +1,56 @@
+[project]
+name = "ananke-context-integrity"
+version = "0.0.1"
+description = "Research prototype: revocation-aware security continuity across repeated context compaction in AI agents (synthetic, offline)."
+readme = "README.md"
+requires-python = ">=3.12"
+# License intentionally unset: Apache-2.0 is proposed, pending owner review (see STATUS.md).
+dependencies = [
+  "pydantic>=2.9,<3",
+  "typer>=0.12,<1",
+]
+
+[project.scripts]
+ananke = "ananke.cli:app"
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "hypothesis>=6.100",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ananke"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --import-mode=importlib"
+pythonpath = ["tests"]
+markers = [
+  "smoke: minimal offline smoke checks",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "PT", "RUF"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S311", "S608", "PT018"]  # asserts, seeded RNG, test-only SQL, compound asserts
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+packages = ["ananke"]
+plugins = ["pydantic.mypy"]

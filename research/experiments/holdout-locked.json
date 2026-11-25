@@ -1,0 +1,8 @@
+{
+  "name": "holdout-primary (LOCKED until preregistration is FROZEN)",
+  "split": "holdout",
+  "strategies": ["M2_SUMMARY", "M4_FRESH_FULL_POLICY", "M5_PROJECTION"],
+  "gateways": ["G1_ENFORCED"],
+  "budgets": [900],
+  "comparisons": [["M5_PROJECTION", "M4_FRESH_FULL_POLICY"]]
+}
