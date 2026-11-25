@@ -13,5 +13,6 @@
 | [0009](0009-idempotency-and-failure-semantics.md) | Idempotency binds committed effects; failures are recorded or raised | Accepted (v0) |
 | [0010](0010-operator-signatures.md) | Operator signatures + external checkpoints | **Proposed: threat-model change, owner decision** |
 | [0011](0011-belief-agent-model.md) | Deterministic belief agent for offline memory evaluation | Accepted (v0); not an LLM model |
+| [0012](0012-generator-versioning.md) | Versioned generator; holdout pinned to v1 until regenerated | Accepted (v0) |
 
 Status "Accepted (v0)" means accepted by the implementer for the prototype, subject to owner review.

@@ -1,10 +1,10 @@
 # STATUS
 
-**Last updated:** 2026-11-25 (session 3) · **Engineering gates complete:** Phases 0, 1, 2, 3, 4.
+**Last updated:** 2026-11-25 (session 4) · **Engineering gates complete:** Phases 0, 1, 2, 3, 4, plus the Phase 5 prep that needs no owner decision.
 **Owner decisions pending:** ADR-0007 (positioning), ADR-0010 (operator signatures: a threat-model change), license,
 the real-model arm (cost), commit/push approval.
-**Scientific results:** none. There is a **dev-split engineering pilot** with a deterministic belief agent
-(`research/pilot-dev-report.md`). The holdout is locked, and a preregistration is not frozen.
+**Scientific results:** none. There is a **dev-split engineering pilot v2** with a deterministic belief agent
+(`research/pilot-dev-report.md`). The holdout is locked and pinned to generator v1, and a preregistration is not frozen.
 
 ## Gate summary
 
@@ -15,7 +15,34 @@ the real-model arm (cost), commit/push approval.
 | 2 | Evaluator, single-transaction gateway, approvals, idempotency, tools, differential test | Done |
 | 3 | Memory entries + conservative labels; token estimator; budgeted assembler (`BUDGET_EXCEEDED`, never truncate policy); M0–M5 + 3 ablations; projection; belief agent; recall harness | **Done (session 3)** |
 | 4 | Scenario DSL; ≥30 dev + ≥30 holdout fixtures by family with a frozen checksummed manifest; independent oracle; runner (G0/G1); metrics with num/den + clustered CIs; deterministic runs; bench CLI | **Done (session 3)**: 36 + 36 fixtures; "dry-run budget" is N/A until a paid provider exists |
-| 5 | Strong comparator, pilot, preregistration freeze, optional model runs | **Not started.** The pilot exists, but freezing needs owner decisions and the design fixes listed below |
+| 5 | Strong comparator, pilot, preregistration freeze, optional model runs | **Prep done (session 4):** budgets bind, injection family ×3, power estimate, v2 pilot. **Freeze blocked on owner decisions** |
+
+## Session 4 work (dev split only; all exit criteria met)
+
+1. **Generator versioning (ADR-0012):** `GENERATOR_VERSION = {dev: 2, holdout: 1}`. The holdout regenerates byte-identically to its
+   frozen manifest (tested), and 0 holdout files changed.
+2. **The budgets now bind:** v2 filler gives a median M0 history of about 1,030 estimated tokens (mean about 1,180). The pilot budgets are
+   450, 1,100 and 2,600. Exit criterion met and tested: M1 completion is 12, 27 and 32 out of 44.
+3. **Injection family:** 4 formats (high-epoch grant, wrong-principal control, forged complete snapshot, forged revoke
+   with prose) give 12 attack checkpoints per condition. The attack-adoption denominator is now checkpoints with an attack option.
+4. **Power:** `ananke bench power` (cluster-resampling exact McNemar). For M5 vs M4 at 1,100 with a quarantine-respecting
+   agent: 0.774 at 36 scenarios and 0.990 at 72. For an agent ignoring quarantine there is no discordance, so the power is 0.
+5. **v2 pilot** `run-d11292703954` (7,776 records). G1: 0 unauthorized effects; G0: 544. M5 vs M4: 0 vs 8 of 64,
+   p = 0.0078. **All 8 are forged-grant adoptions, and the gap disappears for an agent that ignores quarantine.** Stale authority:
+   M4 and M5 0/20, M2 and M3 12/20. Reported: the negative warnings ablation, and budget eviction as an accidental defence.
+6. **Report and docs:** `research/pilot-dev-report.md` (v2; every cited number was checked against `metrics.json`, which
+   caught and fixed one median/mean slip); v1 is archived as `pilot-dev-report-v1.md`; the preregistration's power item and H1b are updated;
+   README is updated.
+7. **Studio preview refreshed** with the v2 datasets and copy (reference budget 1,100). Its calcs were verified offline in Node against the uploaded CSVs. It
+   **still has no live page-check report**, because nobody has opened it.
+
+### Session 4 commands (this container)
+| Command | Actual result |
+|---|---|
+| `make check` (with `pipefail`) | exit 0: ruff clean, `84 files already formatted`, mypy `no issues found in 49 source files`, **`595 passed`**, demo ok, scenarios verified, smoke completed |
+| `bench generate` | dev 36 regenerated (v2); holdout digest unchanged `sha256:d82df74…` |
+| `bench run --config research/experiments/pilot-dev.json` | 7,776 records in 2 min 31 s, `run-d11292703954` |
+| `bench power` (2 configurations) | as above; saved in `results/sample-dev-pilot-v2/` |
 
 ## Session 3 work
 
@@ -95,8 +122,11 @@ Environment: Linux x86_64, Python 3.13.18 via uv 0.11.32, SQLite 3.53.1, Node 22
 7. The CI workflow was never executed (nothing pushed). Windows is untested. The license is unselected.
    **All work is uncommitted, and this container is ephemeral.**
 
-## Next task (Phase 5 prep; dev split only, no owner decision needed)
-1. Recalibrate the budgets so they bind (longer filler or lower budgets). Exit criterion: on dev, M1 completion varies across ≥2 budget levels.
-2. Expand the untrusted-claim family to ≥12 checkpoints, with varied forgery formats (wrong epoch, wrong principal, prose claims).
-3. Add a power estimate from pilot variance to the preregistration draft.
-4. Then **stop for the owner**: ADR-0007, ADR-0010, holdout regeneration, the real-model arm and its budget, and the freeze.
+## Next task: blocked on the owner (no further dev-only work is needed for a freeze)
+1. ADR-0007 (positioning) and ADR-0010 (signatures, a threat-model change).
+2. **Regenerate the holdout at generator v2** with new seeds. The proposal is ≥72 scenarios (8 variants per family) per the power estimate.
+3. The real-model arm: models, temperatures, repeats and a cost cap (it must have its own pilot).
+4. An independent review of the oracle, the reference model and the generator.
+5. Then freeze `research/preregistration.md` (`Status: FROZEN`) and tag the commit.
+
+Optional dev-only work meanwhile: extra agent variants (e.g. one that can be swayed by prose), and a summarizer `recency` profile run.

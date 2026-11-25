@@ -45,14 +45,14 @@ uv run ananke ledger show   --db .ananke/demo.sqlite --at 12
 Every command prints JSON and exits 0 on success, 1 on a failed validation, verification or audit, and 2 when input is
 unavailable or a run is locked (for example a holdout run before preregistration is frozen).
 
-## What the dev pilot shows (scripted agent; not LLM evidence)
+## What the dev pilot shows (generator v2, scripted agent; not LLM evidence)
 
-- Under enforcement, there were 0 unauthorized effects and 0 oracle–gateway disagreements across all 54 enforced conditions. With
-  enforcement off (lab only), unauthorized effects equal unauthorized proposals.
-- Fresh policy rendering (M4 and M5) removes stale-authority proposals that summary-only and pinned-policy strategies make.
-- M5 vs M4 differs only through provenance quarantine, and that benefit disappears for an agent that ignores quarantine.
-- The pilot also exposed design flaws (budgets that do not bind, a small injection family) that must be fixed before freezing.
-  Details are in [`research/pilot-dev-report.md`](research/pilot-dev-report.md).
+- Under enforcement there were 0 unauthorized effects and 0 oracle–gateway disagreements across all 54 enforced conditions. With
+  enforcement off (lab only), the same proposals committed 544 unauthorized effects.
+- Fresh policy rendering (M4 and M5) removes stale-authority proposals (0/20, against 12/20 for summary-only and pinned policy).
+- M5 beats M4 on dev (p = 0.008), but **only** through provenance quarantine. For an agent that ignores quarantine the two
+  are identical. Whether real models honour quarantine is the real research question.
+- Full write-up, including negative ablations and confounds: [`research/pilot-dev-report.md`](research/pilot-dev-report.md).
 
 ## Scope and safety
 

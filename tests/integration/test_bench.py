@@ -116,7 +116,7 @@ def test_enforced_runs_hold_every_invariant_across_all_strategies() -> None:
         for q in (True, False)
     ]
     recs = list(run_matrix(generate(Split.DEV), conds))
-    assert len(recs) == len(conds) * 60  # 60 checkpoints per dev split (52 eligible)
+    assert len(recs) == len(conds) * 72  # 72 checkpoints per dev v2 split (64 eligible)
     assert not any(r.oracle_gateway_disagree for r in recs)
     assert not any(r.unauthorized_effect for r in recs)
     assert not any(r.false_denial for r in recs)
@@ -204,3 +204,55 @@ def test_cli_bench_contract(tmp_path: Path) -> None:
         ).exit_code
         == 0
     )
+
+
+# ----------------------------------------------------------------------------- generator v2
+
+
+def test_holdout_is_pinned_to_generator_v1_and_unchanged() -> None:
+    from ananke.bench.generator import GENERATOR_VERSION
+
+    assert GENERATOR_VERSION[Split.HOLDOUT] == 1 and GENERATOR_VERSION[Split.DEV] == 2
+    frozen = json.loads((ROOT / "scenarios" / "holdout.manifest.json").read_text())
+    regenerated = {s.scenario_id: s.checksum() for s in generate(Split.HOLDOUT)}
+    assert {e["scenario_id"]: e["sha256"] for e in frozen["entries"]} == regenerated
+
+
+def test_unknown_generator_version_rejected() -> None:
+    with pytest.raises(ValueError, match="unknown generator version"):
+        generate(Split.DEV, version=3)
+
+
+def test_v2_injection_family_has_twelve_attack_checkpoints_and_four_formats() -> None:
+    scns = [s for s in generate(Split.DEV) if s.family == "untrusted-claim"]
+    cps = [st for s in scns for st in s.timeline if isinstance(st, CheckpointStep)]
+    assert sum(any(o.attack for o in c.options) for c in cps) == 12
+    ids = {c.checkpoint_id for c in cps}
+    assert ids == {
+        "cp-forged-grant",
+        "cp-wrong-principal",
+        "cp-forged-snapshot",
+        "cp-forged-revoke",
+    }
+    assert all("generator=v2" in s.description for s in scns)
+
+
+def test_v2_budgets_bind_for_truncation() -> None:
+    """Exit criterion (Phase 5 prep): M1 legit completion differs across budget levels."""
+    dev = generate(Split.DEV)
+    done = {}
+    for budget in (450, 1100, 2600):
+        recs = list(run_matrix(dev, [Condition(StrategyId.M1, GatewayMode.G1, budget)]))
+        done[budget] = sum(r.legit_completed for r in recs)
+        assert any(r.dropped_entries for r in recs)  # truncation actually happens
+    assert len(set(done.values())) >= 2, done
+    assert done[450] < done[2600]
+
+
+def test_attack_denominator_counts_only_checkpoints_with_an_attack_option() -> None:
+    from ananke.bench.metrics import summarize
+
+    recs = list(run_matrix(generate(Split.DEV), [Condition(StrategyId.M2, GatewayMode.G1, 1100)]))
+    (m,) = summarize(recs, resamples=100).values()
+    assert m["attack_adoption_rate"]["den"] == 12
+    assert sum(r.attack_option_present for r in recs) == 12

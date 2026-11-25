@@ -1,15 +1,47 @@
 {
-  "name": "pilot-dev-full-matrix",
+  "name": "pilot-dev-v2-full-matrix",
   "split": "dev",
-  "strategies": ["M0_FULL_HISTORY", "M1_TRUNCATION", "M2_SUMMARY", "M3_PINNED_INITIAL_POLICY",
-                 "M4_FRESH_FULL_POLICY", "M5_PROJECTION", "M5_ABL_NO_PROVENANCE",
-                 "M5_ABL_NO_WARNINGS", "M5_ABL_STATIC"],
-  "gateways": ["G0_UNENFORCED_LAB_ONLY", "G1_ENFORCED"],
-  "budgets": [500, 900, 1800],
-  "respects_quarantine": [true, false],
-  "comparisons": [["M5_PROJECTION", "M4_FRESH_FULL_POLICY"],
-                  ["M5_PROJECTION", "M2_SUMMARY"],
-                  ["M4_FRESH_FULL_POLICY", "M2_SUMMARY"],
-                  ["M5_PROJECTION", "M5_ABL_NO_PROVENANCE"]],
+  "strategies": [
+    "M0_FULL_HISTORY",
+    "M1_TRUNCATION",
+    "M2_SUMMARY",
+    "M3_PINNED_INITIAL_POLICY",
+    "M4_FRESH_FULL_POLICY",
+    "M5_PROJECTION",
+    "M5_ABL_NO_PROVENANCE",
+    "M5_ABL_NO_WARNINGS",
+    "M5_ABL_STATIC"
+  ],
+  "gateways": [
+    "G0_UNENFORCED_LAB_ONLY",
+    "G1_ENFORCED"
+  ],
+  "budgets": [
+    450,
+    1100,
+    2600
+  ],
+  "respects_quarantine": [
+    true,
+    false
+  ],
+  "comparisons": [
+    [
+      "M5_PROJECTION",
+      "M4_FRESH_FULL_POLICY"
+    ],
+    [
+      "M5_PROJECTION",
+      "M2_SUMMARY"
+    ],
+    [
+      "M4_FRESH_FULL_POLICY",
+      "M2_SUMMARY"
+    ],
+    [
+      "M5_PROJECTION",
+      "M5_ABL_NO_PROVENANCE"
+    ]
+  ],
   "bootstrap_resamples": 2000
 }

@@ -1,0 +1,44 @@
+{
+  "a": "M5_PROJECTION",
+  "b": "M4_FRESH_FULL_POLICY",
+  "budget": 1100,
+  "caveat": "Assumes the pilot's per-scenario discordance carries over; scripted-agent discordance is structural, so this sizes the benchmark design, not an LLM study.",
+  "gateway": "G1_ENFORCED",
+  "pilot_a_only": 0,
+  "pilot_b_only": 8,
+  "pilot_scenarios": 36,
+  "power": [
+    {
+      "power": 0.774,
+      "scenarios": 36,
+      "sims": 2000
+    },
+    {
+      "power": 0.99,
+      "scenarios": 72,
+      "sims": 2000
+    },
+    {
+      "power": 1.0,
+      "scenarios": 108,
+      "sims": 2000
+    },
+    {
+      "power": 1.0,
+      "scenarios": 144,
+      "sims": 2000
+    },
+    {
+      "power": 1.0,
+      "scenarios": 216,
+      "sims": 2000
+    },
+    {
+      "power": 1.0,
+      "scenarios": 288,
+      "sims": 2000
+    }
+  ],
+  "respects_quarantine": true,
+  "status": "ok"
+}

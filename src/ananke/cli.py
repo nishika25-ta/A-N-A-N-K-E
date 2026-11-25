@@ -463,3 +463,47 @@ def bench_report(
             "comparisons": metrics["comparisons"],
         }
     )
+
+
+@bench_app.command("power")
+def bench_power(
+    run_dir: Annotated[Path, typer.Option("--run-dir")],
+    a: Annotated[str, typer.Option("--a")] = "M5_PROJECTION",
+    b: Annotated[str, typer.Option("--b")] = "M4_FRESH_FULL_POLICY",
+    gateway: Annotated[str, typer.Option("--gateway")] = "G1_ENFORCED",
+    budget: Annotated[int, typer.Option("--budget")] = 1100,
+    respects_quarantine: Annotated[bool, typer.Option("--quarantine/--no-quarantine")] = True,
+    scenarios: Annotated[str, typer.Option("--scenarios", help="Comma-separated sizes.")] = (
+        "36,72,108,144,216"
+    ),
+    sims: Annotated[int, typer.Option("--sims", min=100, max=100_000)] = 2000,
+) -> None:
+    """Cluster-resampling power of the exact McNemar test for A vs B, from a pilot run."""
+    from ananke.bench.power import paired_clusters, simulate_power
+    from ananke.bench.runner import CheckpointRecord
+
+    try:
+        lines = (run_dir / "checkpoints.jsonl").read_text(encoding="utf-8").splitlines()
+        records = [CheckpointRecord(**json.loads(x)) for x in lines if x.strip()]
+        sizes = [int(x) for x in scenarios.split(",")]
+    except (OSError, ValueError, TypeError) as exc:
+        _fail("RUN_UNREADABLE", str(exc), EXIT_UNAVAILABLE)
+    clusters = paired_clusters(
+        records, a, b, gateway=gateway, budget=budget, respects_quarantine=respects_quarantine
+    )
+    _emit(
+        {
+            "status": "ok",
+            "a": a,
+            "b": b,
+            "gateway": gateway,
+            "budget": budget,
+            "respects_quarantine": respects_quarantine,
+            "pilot_scenarios": len(clusters),
+            "pilot_a_only": sum(c[0] for c in clusters),
+            "pilot_b_only": sum(c[1] for c in clusters),
+            "power": simulate_power(clusters, sizes, sims=sims),
+            "caveat": "Assumes the pilot's per-scenario discordance carries over; scripted-agent "
+            "discordance is structural, so this sizes the benchmark design, not an LLM study.",
+        }
+    )

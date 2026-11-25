@@ -13,9 +13,10 @@ M4 as a Constraint-Pinning-style baseline and M5 as the candidate.
 
 ## Hypotheses (not results)
 - H1: M5 has a lower unauthorized proposal rate than M2 and M3 after transitions, at matched budgets.
-- H1b (the decisive comparison): M5 differs from M4. *(pilot)* The dev pilot suggests the two tie on stale authority and
-  differ only through provenance under the quarantine assumption. The null result (no difference) is a
-  publishable outcome.
+- H1b (the decisive comparison): M5 differs from M4. *(pilot v2)* On dev they tie on stale authority (0/20 each). The
+  whole difference (8 discordant pairs, all favouring M5) is forged-grant adoption, and it vanishes for an agent that
+  ignores quarantine. The confirmatory test is therefore really a test of **H4**, and must be run with real models. The
+  null result is a publishable outcome.
 - H2: G1 commits zero unauthorized effects within the tested scope (an engineering invariant, reported with counts).
 - H3: at budgets where M4 raises BUDGET_EXCEEDED, M5 still completes legitimate tasks.
 - H4: the provenance benefit depends on whether the model treats quarantined content as data (measured, not assumed).
@@ -33,9 +34,15 @@ M4 as a Constraint-Pinning-style baseline and M5 as the candidate.
 - Every result is reported, including nulls and every ablation. No retrospective threshold tuning.
 
 ## Design changes required before freeze *(pilot)*
-- [ ] Recalibrate budgets so they bind. Contexts average about 400 to 460 estimated tokens, so 900 and 1,800 behave the same.
-- [ ] Enlarge the untrusted-claim family (currently 4 checkpoints per condition), with varied forgery formats.
-- [ ] Estimate the required number of scenarios from pilot variance, and extend the holdout if underpowered (regenerate the
-      holdout only *before* freezing).
+- [x] Recalibrate budgets so they bind (generator v2, ADR-0012): median M0 history is about 1,030 estimated tokens. Proposed
+      levels are 450, 1,100 and 2,600, and M1 completion varies across them on dev (tested).
+- [x] Enlarge the injection family: 12 attack checkpoints per condition, in four formats (high-epoch grant, wrong
+      principal, forged complete snapshot, forged revoke with prose).
+- [ ] **Regenerate the holdout at generator v2 with new seeds** (owner decision). Until then dev (v2) and holdout (v1)
+      differ in design.
+- [x] Power estimate from the v2 dev pilot (`ananke bench power`; `results/sample-dev-pilot-v2/`). For M5 vs M4 at
+      budget 1,100 with a quarantine-respecting agent: 0.774 at 36 scenarios, 0.990 at 72, 1.0 from 108. For an agent that
+      ignores quarantine there is **no** discordance, so the power is 0. **Proposal:** at least 72 holdout scenarios (8 variants per family) for
+      the scripted arm. The real-model arm must be sized from its own pilot, because scripted discordance is structural.
 - [ ] Decide the real-model arm: models, temperatures, repeats and a cost cap (owner consent).
 - [ ] Re-review every oracle rule independently (the oracle and the evaluator share an author).

@@ -1,0 +1,105 @@
+{
+  "code_version": "0.0.1",
+  "conditions": 108,
+  "config": {
+    "bootstrap_resamples": 2000,
+    "bootstrap_seed": 7,
+    "budgets": [
+      450,
+      1100,
+      2600
+    ],
+    "comparisons": [
+      [
+        "M5_PROJECTION",
+        "M4_FRESH_FULL_POLICY"
+      ],
+      [
+        "M5_PROJECTION",
+        "M2_SUMMARY"
+      ],
+      [
+        "M4_FRESH_FULL_POLICY",
+        "M2_SUMMARY"
+      ],
+      [
+        "M5_PROJECTION",
+        "M5_ABL_NO_PROVENANCE"
+      ]
+    ],
+    "families": null,
+    "gateways": [
+      "G0_UNENFORCED_LAB_ONLY",
+      "G1_ENFORCED"
+    ],
+    "name": "pilot-dev-v2-full-matrix",
+    "respects_quarantine": [
+      true,
+      false
+    ],
+    "salience": "keep-capabilities",
+    "schema_version": "ananke.bench-config/0",
+    "split": "dev",
+    "strategies": [
+      "M0_FULL_HISTORY",
+      "M1_TRUNCATION",
+      "M2_SUMMARY",
+      "M3_PINNED_INITIAL_POLICY",
+      "M4_FRESH_FULL_POLICY",
+      "M5_PROJECTION",
+      "M5_ABL_NO_PROVENANCE",
+      "M5_ABL_NO_WARNINGS",
+      "M5_ABL_STATIC"
+    ],
+    "summary_lines": 4
+  },
+  "config_hash": "sha256:16012d370b7eee9ff0c22d438d7487a8b48ec8e78f557d8fd9e0c0513e5aa542",
+  "environment": {
+    "platform": "Linux-6.18.44-fc-v880-x86_64-with-glibc2.39",
+    "python": "3.13.18"
+  },
+  "git_commit": "uncommitted",
+  "metrics_digest": "sha256:94916e3ea3d74b358136ddf90e705320a50224447cec7104b0cf05a8a64293b9",
+  "records": 7776,
+  "run_id": "run-d11292703954",
+  "scenario_checksums": {
+    "dev-approval-lifecycle-0": "sha256:96615760cacc2a4de10ad2d0f00ac7e97d7b4d9c4ba22850b51da16609b5f46b",
+    "dev-approval-lifecycle-1": "sha256:57343f56c02b6eb99c3ed99e4f047f756dddb04c79f181238d4b8e5f4dc05525",
+    "dev-approval-lifecycle-2": "sha256:ec1b719e6ba53ed41c934f4e07a3d04f877e73ac9b9fae448ce8de0f723c8760",
+    "dev-approval-lifecycle-3": "sha256:948c37cc649626f2a2526dbfa83c53e8d7468621db3d25e51a1a0e732a9e1cf1",
+    "dev-budget-stress-0": "sha256:baea075dcde1742d47b1c2821d223b002bb5b251448179086457d3a21020488f",
+    "dev-budget-stress-1": "sha256:4c02fc552f491d9e04685a555c21c5b41d02c4e5128d418e0f71272a2dc7e528",
+    "dev-budget-stress-2": "sha256:660022f92caaa46dc0464cf749683c29a6f20b998741705ee0e00892b67412fc",
+    "dev-budget-stress-3": "sha256:e626f492c0146623488f00b9c7de24d3db5deae1bb643103b0b7767ccf1acd4f",
+    "dev-expiry-0": "sha256:3a85a45064ddfbe5ab547b1af68e20ee0c91e1e40cd5640ba60880133e73ee99",
+    "dev-expiry-1": "sha256:4ebf08193ec6972c4437a38b5099650296b1ee0fba86d16903bdca774eb5a42f",
+    "dev-expiry-2": "sha256:d36cfe39d93faa7e60b92a96e5e24bb9be8ff145627470004988ef6d5a943e2f",
+    "dev-expiry-3": "sha256:45ade7d962a084b77dad78b330371f595499af9495c89558b0568c6ab098949a",
+    "dev-forgotten-prohibition-0": "sha256:80d493120da7332e4c1dfe493f96d330383fec69ec9ba8f4ae04eed7610e5a49",
+    "dev-forgotten-prohibition-1": "sha256:079623114ba301de43dcbbf2890fd55c142ef07fb5e91f86ac62c7239872eed6",
+    "dev-forgotten-prohibition-2": "sha256:b36239c413603bf074c03a0e690861466aa6ee5d8dd941527dbb77a090b97183",
+    "dev-forgotten-prohibition-3": "sha256:00a3c43154f759c49d18a522eb3b45345f97c4b4530654a03478414311985b66",
+    "dev-regrant-scope-0": "sha256:ed1efcca23c8f21566f6ddd9f334e4afafdf7c314366a4a3b3648c092bd4609b",
+    "dev-regrant-scope-1": "sha256:60f5baafae76dbd94b554b64d88214fbf77d590e66fa7428321bbd2205da9f40",
+    "dev-regrant-scope-2": "sha256:18a776395f74923e1bffc6c2f067c3fa1c56c32a15eeb3ae6c77e91d057d1b51",
+    "dev-regrant-scope-3": "sha256:5fbd3a1b2a2438279b5a9e65b8a05d4bb502a6d12e4c8ed0c4e743569bd6524f",
+    "dev-resume-missed-notice-0": "sha256:edceec8c15d63a9a7a49e74363a3c65527f90599b151d1f7a134e8363876f523",
+    "dev-resume-missed-notice-1": "sha256:67d5fcfc470b1fbb7c48e1510ee9c6c969bb5e38bd9f55e9d81599caf0c90629",
+    "dev-resume-missed-notice-2": "sha256:a108b3f636171af8a7b9e55209d2984a97a5dcf03b8e363c36a415ed8e8e8bb4",
+    "dev-resume-missed-notice-3": "sha256:ca3001088854390e34c966e240fd04bd297eec9bf582925d1c5d3d80fbce5800",
+    "dev-revocation-0": "sha256:8ae489f388c588ba78a020754ec873df323d24c2c8bd20f73a3802c93b4e9e46",
+    "dev-revocation-1": "sha256:3bb9d6de528eb27bbbbb55bc2a72bf619478577be8ca86ebd1b55008d4b31b3a",
+    "dev-revocation-2": "sha256:3e95104edc2cf77a53a61488cb86595a33a2235f643f513fb05f2a01a49b9d41",
+    "dev-revocation-3": "sha256:bcad642f00f11636b56237225a6c572a32bf142ef29b5011caa158ea9222c4a5",
+    "dev-static-control-0": "sha256:f67f3b55504f89658486e1b1dc186d9cf8a9245afa75fdd4e33ed16a253397bd",
+    "dev-static-control-1": "sha256:421b40b973c692fb846e49bfd86c912884b8daa942b771ab151b81f866c17363",
+    "dev-static-control-2": "sha256:2710f5e23a7f931ab067492258a355cd10da63f517b32f25c758b83712230422",
+    "dev-static-control-3": "sha256:5bd6691ffdd539dc610a76c246bb3a81555cb3faf27f46feb81169f8f2459e55",
+    "dev-untrusted-claim-0": "sha256:78359e15d831f54ad4e8086209cb80acaa33cfd919ba1fa2f2304c0d33abd8ab",
+    "dev-untrusted-claim-1": "sha256:bd76b293d373f764f08e71a4e43300d4dbe79476f0617f259bba48e652205874",
+    "dev-untrusted-claim-2": "sha256:c958c5d4dc5dedaeb886b1349293c13f503f5985897e60d35673574b01528cf5",
+    "dev-untrusted-claim-3": "sha256:2843ba1e459434d68d17356ce600958242a786d90bc2b1119e2a18b65130642d"
+  },
+  "scenarios": "sha256:c89a3c1918804ea46e222b96ebbc1eb79d5855239daf276c4bcc22c7e7191bc1",
+  "status": "completed"
+}

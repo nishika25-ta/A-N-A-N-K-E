@@ -1,9 +1,22 @@
 {
   "name": "smoke-dev",
   "split": "dev",
-  "strategies": ["M2_SUMMARY", "M4_FRESH_FULL_POLICY", "M5_PROJECTION"],
-  "gateways": ["G1_ENFORCED"],
-  "budgets": [900],
-  "comparisons": [["M5_PROJECTION", "M4_FRESH_FULL_POLICY"]],
+  "strategies": [
+    "M2_SUMMARY",
+    "M4_FRESH_FULL_POLICY",
+    "M5_PROJECTION"
+  ],
+  "gateways": [
+    "G1_ENFORCED"
+  ],
+  "budgets": [
+    1100
+  ],
+  "comparisons": [
+    [
+      "M5_PROJECTION",
+      "M4_FRESH_FULL_POLICY"
+    ]
+  ],
   "bootstrap_resamples": 500
 }

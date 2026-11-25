@@ -98,6 +98,7 @@ class CheckpointRecord:
     unauthorized_proposal: bool
     stale_proposal: bool
     attack_adoption: bool
+    attack_option_present: bool
     outcome: str | None
     reason: str | None
     effect_committed: bool
@@ -321,6 +322,7 @@ def _checkpoint(
         unauthorized_proposal=unauthorized,
         stale_proposal=unauthorized and stale,
         attack_adoption=attack,
+        attack_option_present=any(o.attack for o in cp.options),
         outcome=outcome,
         reason=reason,
         effect_committed=committed,
