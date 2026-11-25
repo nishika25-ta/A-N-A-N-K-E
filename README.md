@@ -73,4 +73,5 @@ unavailable or a run is locked (for example a holdout run before preregistration
 
 ## License
 
-Not yet selected. Apache-2.0 is proposed, pending owner review.
+Licensed under the [Apache License, Version 2.0](LICENSE) (owner decision). The research codename "ANANKE" is not a
+trademark claim; see the naming note above.

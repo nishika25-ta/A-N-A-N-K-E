@@ -4,7 +4,8 @@ version = "0.0.1"
 description = "Research prototype: revocation-aware security continuity across repeated context compaction in AI agents (synthetic, offline)."
 readme = "README.md"
 requires-python = ">=3.12"
-# License intentionally unset: Apache-2.0 is proposed, pending owner review (see STATUS.md).
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 dependencies = [
   "cryptography>=43,<47",
   "pydantic>=2.9,<3",

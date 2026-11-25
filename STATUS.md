@@ -1,7 +1,7 @@
 # STATUS
 
-**Last updated:** 2026-11-25 (session 7) · **Engineering gates complete:** Phases 0, 1, 2, 3, 4, plus the Phase 5 prep that needs no owner decision.
-**Owner decisions:** ADR-0007 **accepted** (session 6), ADR-0010 **accepted and implemented** (session 7). Pending: license,
+**Last updated:** 2026-11-25 (session 8) · **Engineering gates complete:** Phases 0, 1, 2, 3, 4, plus the Phase 5 prep that needs no owner decision.
+**Owner decisions:** ADR-0007 **accepted** (session 6), ADR-0010 **accepted and implemented** (session 7), license **Apache-2.0** (session 8). Pending:
 the real-model arm (cost), commit/push approval.
 **Scientific results:** none. There is a **dev-split engineering pilot v2** with a deterministic belief agent
 (`research/pilot-dev-report.md`). The holdout is **regenerated at generator v2 (72 scenarios) and locked**, and a preregistration is not frozen.
@@ -16,6 +16,14 @@ the real-model arm (cost), commit/push approval.
 | 3 | Memory entries + conservative labels; token estimator; budgeted assembler (`BUDGET_EXCEEDED`, never truncate policy); M0–M5 + 3 ablations; projection; belief agent; recall harness | **Done (session 3)** |
 | 4 | Scenario DSL; ≥30 dev + ≥30 holdout fixtures by family with a frozen checksummed manifest; independent oracle; runner (G0/G1); metrics with num/den + clustered CIs; deterministic runs; bench CLI | **Done (session 3)**: 36 + 36 fixtures; "dry-run budget" is N/A until a paid provider exists |
 | 5 | Strong comparator, pilot, preregistration freeze, optional model runs | **Prep done (session 4):** budgets bind, injection family ×3, power estimate, v2 pilot. **Freeze blocked on owner decisions** |
+
+## Session 8: Apache-2.0 license (owner decision)
+
+- `LICENSE` holds the Apache License 2.0 text, copied verbatim from the copy that `cryptography` 46.0.7 ships. It was cross-checked against the copy that
+  `packaging` ships: the terms are identical, and the only differences are the header URL scheme and the optional appendix, which the official text includes.
+- `pyproject.toml`: `license = "Apache-2.0"`, `license-files = ["LICENSE"]` (PEP 639). The built wheel carries
+  `License-Expression: Apache-2.0` and bundles the license file (verified).
+- README and CONTRIBUTING are updated. Dependencies (pydantic MIT, typer MIT, cryptography Apache-2.0/BSD) are compatible.
 
 ## Session 7: ADR-0010 accepted and implemented (owner decision)
 
@@ -157,7 +165,7 @@ Environment: Linux x86_64, Python 3.13.18 via uv 0.11.32, SQLite 3.53.1, Node 22
 5. The oracle, the reference model and the evaluator share an author, so an independent review is required.
 6. **The Studio preview has not yet been judged in a live view**: no page-check report exists because nobody has opened it.
    Its calcs were verified offline in Node against the uploaded CSVs. It is private until shared from its Share menu.
-7. The CI workflow was never executed (nothing pushed). Windows is untested. The license is unselected.
+7. The CI workflow has never been observed running. Windows is untested.
    **All work is uncommitted, and this container is ephemeral.**
 
 ## Next task: blocked on the owner (no further dev-only work is needed for a freeze)
