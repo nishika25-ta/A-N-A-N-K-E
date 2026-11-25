@@ -15,6 +15,14 @@ the regenerated holdout equals the frozen manifest. Version 2 (dev) adds:
 
 The attack-adoption denominator is now the eligible checkpoints that carry an attack option.
 
+**Update (session 5, owner decision).** The holdout was regenerated at **v2** through an explicit, logged
+re-freeze (`ananke bench generate --refreeze-holdout "<reason>"`). It uses a **new seed space** (offset 30,000; the v1
+holdout used 10,000), **8 variants per family (72 scenarios)** per the power estimate, and holdout-only phrasing for the
+injected text (template tpl-b). The superseded v1 manifest is archived unchanged as
+`scenarios/holdout.manifest.freeze-1.json`, and `scenarios/holdout.freeze-log.json` records both freezes and their
+reasons. Dev v2 was verified byte-identical, and the retired v1 holdout stays reproducible (tested). Nothing was run on the new
+holdout: runs stay locked until the preregistration is FROZEN.
+
 **Consequences.** Dev and holdout now come from different generator versions. **Before a preregistration freeze, the
 holdout must be regenerated at v2 with new seeds** (owner decision; this also resolves the session-3 guard incident).
 v1 pilot results (`results/sample-dev-pilot/`) are kept as history and labelled v1.

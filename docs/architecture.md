@@ -119,8 +119,10 @@ flowchart TD
   LG --> AUD[Evidence audit after every G1 run]
 ```
 
-Scenarios: 9 families × 4 variants per split. Dev and holdout use disjoint entity pools and different templates.
-The holdout manifest is frozen, and holdout runs are refused until `research/preregistration.md` says `Status: FROZEN`.
+Scenarios: 9 families, generator v2 for both splits; dev has 4 variants per family (36) and holdout 8 (72). They use
+disjoint entity pools, disjoint seed spaces and different templates and phrasing. The holdout manifest is frozen, and it
+changes only through a logged re-freeze with a written reason (`holdout.freeze-log.json`). Holdout runs are refused
+until the first `Status:` line of `research/preregistration.md` is `Status: FROZEN`.
 
 ## 6. Performance (measured on one container; not a general claim)
 

@@ -209,13 +209,97 @@ def test_cli_bench_contract(tmp_path: Path) -> None:
 # ----------------------------------------------------------------------------- generator v2
 
 
-def test_holdout_is_pinned_to_generator_v1_and_unchanged() -> None:
-    from ananke.bench.generator import GENERATOR_VERSION
+def test_holdout_is_v2_matches_frozen_manifest_and_is_balanced() -> None:
+    from ananke.bench.generator import GENERATOR_VERSION, SPLIT_VARIANTS
 
-    assert GENERATOR_VERSION[Split.HOLDOUT] == 1 and GENERATOR_VERSION[Split.DEV] == 2
+    assert GENERATOR_VERSION == {Split.DEV: 2, Split.HOLDOUT: 2}
+    assert SPLIT_VARIANTS == {Split.DEV: 4, Split.HOLDOUT: 8}
     frozen = json.loads((ROOT / "scenarios" / "holdout.manifest.json").read_text())
     regenerated = {s.scenario_id: s.checksum() for s in generate(Split.HOLDOUT)}
     assert {e["scenario_id"]: e["sha256"] for e in frozen["entries"]} == regenerated
+    hold = generate(Split.HOLDOUT)
+    assert len(hold) == 72 and all(
+        sum(s.family == f for s in hold) == 8 for f in {x.family for x in hold}
+    )
+
+
+def test_freeze_log_and_v1_archive_are_consistent() -> None:
+    from ananke.domain import digest
+
+    log = json.loads((ROOT / "scenarios" / "holdout.freeze-log.json").read_text())
+    assert [e["freeze"] for e in log] == [1, 2]
+    assert log[1]["superseded_digest"] == log[0]["manifest_digest"]
+    assert log[1]["generator"] == "v2" and log[1]["seed_space"] == "offset 30000"
+    archived = json.loads((ROOT / "scenarios" / "holdout.manifest.freeze-1.json").read_text())
+    assert archived["manifest_digest"] == log[0]["manifest_digest"]
+    v1 = [
+        {
+            "scenario_id": s.scenario_id,
+            "family": s.family,
+            "split": s.split.value,
+            "template": s.template,
+            "variant": s.variant,
+            "sha256": s.checksum(),
+        }
+        for s in sorted(generate(Split.HOLDOUT, variants=4, version=1), key=lambda s: s.scenario_id)
+    ]
+    assert digest(v1) == archived["manifest_digest"]  # the retired holdout stays reproducible
+    current = json.loads((ROOT / "scenarios" / "holdout.manifest.json").read_text())
+    assert current["manifest_digest"] == log[-1]["manifest_digest"]
+
+
+def _seeds(scenarios: list) -> set[str]:  # type: ignore[type-arg]
+    return {s.description.split()[0] for s in scenarios}
+
+
+def _injected_text(scenarios: list) -> str:  # type: ignore[type-arg]
+    return " ".join(
+        st.content
+        for s in scenarios
+        if s.family == "untrusted-claim"
+        for st in s.timeline
+        if st.kind == "observe"
+    )
+
+
+def test_new_holdout_seeds_and_phrasing_are_disjoint_from_v1_and_dev() -> None:
+    new = generate(Split.HOLDOUT)
+    old = generate(Split.HOLDOUT, variants=4, version=1)
+    assert not _seeds(new) & _seeds(old) and not _seeds(new) & _seeds(generate(Split.DEV))
+    assert "Operator says:" in _injected_text(generate(Split.DEV))
+    assert "Operator says:" not in _injected_text(new)
+    assert "attachment preview" in _injected_text(new)
+
+
+def test_refreeze_requires_reason_archives_and_logs(tmp_path: Path) -> None:
+    import ananke.bench.store as store
+
+    write_scenarios(tmp_path)  # fresh root: first freeze, nothing to log yet
+    assert not (tmp_path / "holdout.freeze-log.json").exists()
+    original = generate
+    try:
+        store.generate = lambda split, variants=None: original(  # type: ignore[assignment]
+            split, 2 if split is Split.HOLDOUT else variants
+        )
+        with pytest.raises(ScenarioStoreError, match="frozen"):
+            write_scenarios(tmp_path)
+        with pytest.raises(ScenarioStoreError, match="frozen"):
+            write_scenarios(tmp_path, refreeze_holdout_reason="   ")
+        out = write_scenarios(tmp_path, refreeze_holdout_reason="test reason")
+        assert out["holdout_refrozen"] is True and out["holdout"] == 18
+        assert len(list((tmp_path / "holdout").glob("*.json"))) == 18  # stale files removed
+        log = json.loads((tmp_path / "holdout.freeze-log.json").read_text())
+        assert [e["reason"] for e in log] == ["initial freeze", "test reason"]
+        assert (tmp_path / "holdout.manifest.freeze-1.json").exists()
+        assert write_scenarios(tmp_path)["holdout_refrozen"] is False  # now stable again
+        assert load_split(tmp_path, Split.HOLDOUT)
+    finally:
+        store.generate = original  # type: ignore[assignment]
+
+
+def test_refreeze_without_existing_freeze_is_refused(tmp_path: Path) -> None:
+    with pytest.raises(ScenarioStoreError, match="nothing to re-freeze"):
+        write_scenarios(tmp_path, refreeze_holdout_reason="x")
 
 
 def test_unknown_generator_version_rejected() -> None:

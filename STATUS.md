@@ -1,10 +1,10 @@
 # STATUS
 
-**Last updated:** 2026-11-25 (session 4) · **Engineering gates complete:** Phases 0, 1, 2, 3, 4, plus the Phase 5 prep that needs no owner decision.
+**Last updated:** 2026-11-25 (session 5) · **Engineering gates complete:** Phases 0, 1, 2, 3, 4, plus the Phase 5 prep that needs no owner decision.
 **Owner decisions pending:** ADR-0007 (positioning), ADR-0010 (operator signatures: a threat-model change), license,
 the real-model arm (cost), commit/push approval.
 **Scientific results:** none. There is a **dev-split engineering pilot v2** with a deterministic belief agent
-(`research/pilot-dev-report.md`). The holdout is locked and pinned to generator v1, and a preregistration is not frozen.
+(`research/pilot-dev-report.md`). The holdout is **regenerated at generator v2 (72 scenarios) and locked**, and a preregistration is not frozen.
 
 ## Gate summary
 
@@ -16,6 +16,19 @@ the real-model arm (cost), commit/push approval.
 | 3 | Memory entries + conservative labels; token estimator; budgeted assembler (`BUDGET_EXCEEDED`, never truncate policy); M0–M5 + 3 ablations; projection; belief agent; recall harness | **Done (session 3)** |
 | 4 | Scenario DSL; ≥30 dev + ≥30 holdout fixtures by family with a frozen checksummed manifest; independent oracle; runner (G0/G1); metrics with num/den + clustered CIs; deterministic runs; bench CLI | **Done (session 3)**: 36 + 36 fixtures; "dry-run budget" is N/A until a paid provider exists |
 | 5 | Strong comparator, pilot, preregistration freeze, optional model runs | **Prep done (session 4):** budgets bind, injection family ×3, power estimate, v2 pilot. **Freeze blocked on owner decisions** |
+
+## Session 5 work: holdout regenerated at v2 (owner decision)
+
+- `GENERATOR_VERSION = {dev: 2, holdout: 2}`, `SPLIT_VARIANTS = {dev: 4, holdout: 8}`. The holdout uses a new seed space (offset 30,000)
+  and holdout-only injection phrasing.
+- `ananke bench generate --refreeze-holdout "<reason>"` is the only way to change a frozen holdout. Plain `generate` still refuses
+  (verified: exit 1, `HOLDOUT_FROZEN`). The re-freeze archived v1 as `holdout.manifest.freeze-1.json` and logged freeze 2
+  (`sha256:762d81f1…`, 72 scenarios). Stale holdout files are removed.
+- Verified: **dev v2 is byte-identical (0 dev files changed)**, the retired v1 holdout is still reproducible, seeds are disjoint from v1 and dev,
+  and `bench verify-scenarios` passes (dev 36, holdout 72). Holdout runs are still `HOLDOUT_LOCKED`. **Nothing was run on the new holdout.**
+- Tests: the frozen-manifest match and balance, freeze-log/archive consistency, disjoint seeds and phrasing, re-freeze requires a
+  non-blank reason, removal of stale files, and re-freeze without an existing freeze refused.
+- `make check` (with `pipefail`): **exit 0**, `599 passed`, mypy clean on 49 files, scenarios verified (dev 36 / holdout 72).
 
 ## Session 4 work (dev split only; all exit criteria met)
 
@@ -124,7 +137,7 @@ Environment: Linux x86_64, Python 3.13.18 via uv 0.11.32, SQLite 3.53.1, Node 22
 
 ## Next task: blocked on the owner (no further dev-only work is needed for a freeze)
 1. ADR-0007 (positioning) and ADR-0010 (signatures, a threat-model change).
-2. **Regenerate the holdout at generator v2** with new seeds. The proposal is ≥72 scenarios (8 variants per family) per the power estimate.
+2. ~~Regenerate the holdout at generator v2~~ **Done in session 5** (72 scenarios, new seeds, logged re-freeze).
 3. The real-model arm: models, temperatures, repeats and a cost cap (it must have its own pilot).
 4. An independent review of the oracle, the reference model and the generator.
 5. Then freeze `research/preregistration.md` (`Status: FROZEN`) and tag the commit.

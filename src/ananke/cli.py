@@ -384,13 +384,22 @@ def bench_generate(
     out: Annotated[Path, typer.Option("--out", help="Scenario root directory.")] = Path(
         "scenarios"
     ),
-    variants: Annotated[int, typer.Option("--variants", min=1, max=50)] = 4,
+    variants: Annotated[
+        int | None, typer.Option("--variants", min=1, max=50, help="Override per-split defaults.")
+    ] = None,
+    refreeze_holdout: Annotated[
+        str | None,
+        typer.Option(
+            "--refreeze-holdout",
+            help="Owner-approved reason to replace the frozen holdout (archived and logged).",
+        ),
+    ] = None,
 ) -> None:
-    """Write dev + holdout scenario files and manifests. The holdout manifest is frozen once."""
+    """Write dev + holdout scenario files and manifests. The holdout changes only on re-freeze."""
     from ananke.bench.store import ScenarioStoreError, write_scenarios
 
     try:
-        summary = write_scenarios(out, variants)
+        summary = write_scenarios(out, variants, refreeze_holdout_reason=refreeze_holdout)
     except ScenarioStoreError as exc:
         _fail("HOLDOUT_FROZEN", str(exc))
     _emit({"status": "ok", **summary})

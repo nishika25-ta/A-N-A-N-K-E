@@ -1,0 +1,24 @@
+[
+  {
+    "count": 36,
+    "freeze": 1,
+    "generator": "v1",
+    "manifest_digest": "sha256:d82df74db2f999c94a61c03f401ab58aadd49eeb36893830cd2d28f2e333f61a",
+    "reason": "initial freeze",
+    "recorded_at": null,
+    "seed_space": "offset 10000",
+    "superseded_digest": null,
+    "variants_per_family": null
+  },
+  {
+    "count": 72,
+    "freeze": 2,
+    "generator": "v2",
+    "manifest_digest": "sha256:762d81f1c298e9eac7f5aab921c709fd70b454a802a9a4637a0337672cc8f027",
+    "reason": "Owner decision (session 5): regenerate holdout at generator v2 with a new seed space and 8 variants per family (power estimate); also retires v1 holdout content touched by the session-3 guard incident (outputs deleted unread).",
+    "recorded_at": "2026-11-25",
+    "seed_space": "offset 30000",
+    "superseded_digest": "sha256:d82df74db2f999c94a61c03f401ab58aadd49eeb36893830cd2d28f2e333f61a",
+    "variants_per_family": 8
+  }
+]

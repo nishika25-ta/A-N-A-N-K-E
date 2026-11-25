@@ -38,8 +38,9 @@ M4 as a Constraint-Pinning-style baseline and M5 as the candidate.
       levels are 450, 1,100 and 2,600, and M1 completion varies across them on dev (tested).
 - [x] Enlarge the injection family: 12 attack checkpoints per condition, in four formats (high-epoch grant, wrong
       principal, forged complete snapshot, forged revoke with prose).
-- [ ] **Regenerate the holdout at generator v2 with new seeds** (owner decision). Until then dev (v2) and holdout (v1)
-      differ in design.
+- [x] **The holdout was regenerated at generator v2** (owner decision, session 5): 72 scenarios (8 variants × 9 families), a new seed
+      space, holdout-only phrasing for the injected text, and a logged re-freeze (`scenarios/holdout.freeze-log.json`, freeze 2,
+      digest `sha256:762d81f1…`). Nothing has been run on it.
 - [x] Power estimate from the v2 dev pilot (`ananke bench power`; `results/sample-dev-pilot-v2/`). For M5 vs M4 at
       budget 1,100 with a quarantine-respecting agent: 0.774 at 36 scenarios, 0.990 at 72, 1.0 from 108. For an agent that
       ignores quarantine there is **no** discordance, so the power is 0. **Proposal:** at least 72 holdout scenarios (8 variants per family) for
